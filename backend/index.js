@@ -1,8 +1,20 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-require('dotenv').config();
+const supabase = require('./src/services/supabase');
 
 const app = express();
+
+// Prueba de conexión
+supabase
+  .from('USERS_TEST')
+  .select('*')
+  .limit(1)
+  .then(({ data, error }) => {
+    if (error) console.error('Error de conexión:', error.message);
+    else console.log('Supabase conectado ✓');
+  });
+
 app.use(cors());
 app.use(express.json());
 
