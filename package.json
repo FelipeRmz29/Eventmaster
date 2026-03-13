@@ -1,12 +1,10 @@
 {
-  "name": "eventmaster-backend",
+  "name": "eventmaster",
   "version": "1.0.0",
   "description": "Plataforma web para gestión de boletos en congresos universitarios.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "nodemon index.js",
-    "start": "node index.js"
+    "test": "jest"
   },
   "repository": {
     "type": "git",
@@ -20,13 +18,7 @@
     "url": "https://github.com/FelipeRmz29/Eventmaster/issues"
   },
   "homepage": "https://github.com/FelipeRmz29/Eventmaster#readme",
-  "dependencies": {
-    "@supabase/supabase-js": "^2.99.1",
-    "cors": "^2.8.6",
-    "dotenv": "^17.3.1",
-    "express": "^5.2.1"
-  },
   "devDependencies": {
-    "nodemon": "^3.1.14"
+    "jest": "^30.3.0"
   }
 }
