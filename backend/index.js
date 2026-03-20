@@ -5,13 +5,18 @@ const http = require("http");
 const WebSocket = require("ws");
 const supabase = require("./src/services/supabase");
 
-const app = express();
+
+const recintosRoutes = require('./src/routes/recintos.routes');
+
+
+
+const app = express();  
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
 // Prueba de conexión a Supabase
 supabase
-  .from("usuarios")
+  .from("recintos")
   .select("*")
   .limit(1)
   .then(({ error }) => {
@@ -21,6 +26,8 @@ supabase
 
 app.use(cors());
 app.use(express.json());
+
+app.use('/recintos', recintosRoutes);
 
 app.get("/", (req, res) => {
   res.json({ message: "EventMaster API running" });
