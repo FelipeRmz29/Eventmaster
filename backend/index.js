@@ -5,8 +5,8 @@ const http = require("http");
 const WebSocket = require("ws");
 const supabase = require("./src/services/supabase");
 
-
 const recintosRoutes = require('./src/routes/recintos.routes');
+const asientosRoutes = require('./src/routes/asientos.routes');
 
 
 
@@ -28,6 +28,7 @@ app.use(cors());
 app.use(express.json());
 
 app.use('/recintos', recintosRoutes);
+app.use('/asientos', asientosRoutes);
 
 app.get("/", (req, res) => {
   res.json({ message: "EventMaster API running" });
