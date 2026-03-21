@@ -20,5 +20,8 @@
   "homepage": "https://github.com/FelipeRmz29/Eventmaster#readme",
   "devDependencies": {
     "jest": "^30.3.0"
+  },
+  "dependencies": {
+    "ws": "^8.19.0"
   }
 }
