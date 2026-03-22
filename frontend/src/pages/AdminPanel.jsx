@@ -5,37 +5,33 @@ function AdminPanel() {
     <div className="page-container">
       <div className="brand-block">
         <h1>
-          Panel <span className="brand-highlight">EventMaster</span>
+          Centro de control <span className="brand-highlight">admin</span>
         </h1>
-        <p>Administra recintos, vistas y flujos internos con una interfaz central.</p>
+        <p>
+          Configura la experiencia de tus eventos con una interfaz profesional.
+        </p>
       </div>
 
       <div className="section-card" style={{ marginTop: "24px" }}>
         <h2 className="section-title">Herramientas administrativas</h2>
         <p className="section-subtitle">
-          Selecciona una acción para continuar con la configuración del sistema.
+          Selecciona una herramienta para continuar trabajando en EventMaster.
         </p>
 
         <div className="admin-grid">
-          <Link to="/admin/venues" className="admin-option">
-            <h3>Ver recintos</h3>
-            <p>Consulta los recintos guardados y valida sus dimensiones.</p>
+          <Link to="/admin/create" className="admin-option">
+            <h3>Diseñador de recinto</h3>
+            <p>Genera layouts con filas y columnas para tus eventos.</p>
           </Link>
 
-          <Link to="/admin/create" className="admin-option">
-            <h3>Crear recinto</h3>
-            <p>Diseña una nueva distribución visual de asientos.</p>
+          <Link to="/admin/venues" className="admin-option">
+            <h3>Recintos guardados</h3>
+            <p>Consulta configuraciones previamente creadas y almacenadas.</p>
           </Link>
 
           <Link to="/websocket" className="admin-option">
-            <h3>Pruebas realtime</h3>
-            <p>Verifica que la comunicación en tiempo real funcione correctamente.</p>
-          </Link>
-        </div>
-
-        <div className="button-group">
-          <Link to="/" className="main-button ghost">
-            Volver al inicio
+            <h3>Prueba realtime</h3>
+            <p>Valida la sincronización instantánea entre múltiples clientes.</p>
           </Link>
         </div>
       </div>

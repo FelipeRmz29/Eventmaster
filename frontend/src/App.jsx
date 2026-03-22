@@ -1,22 +1,28 @@
 import "./App.css";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import Navbar from "./components/Navbar";
+import ProtectedRoute from "./components/ProtectedRoute";
 import Home from "./pages/Home";
+import Login from "./pages/Login";
 import AdminPanel from "./pages/AdminPanel";
 import VenueCreator from "./pages/VenueCreator";
 import VenueList from "./pages/VenueList";
-import ProtectedRoute from "./components/ProtectedRoute";
+import BuyerView from "./pages/BuyerView";
 import WebSocketPanel from "./components/websocketpanel";
 
 function App() {
   return (
     <BrowserRouter>
+      <Navbar />
+
       <Routes>
         <Route path="/" element={<Home />} />
+        <Route path="/login" element={<Login />} />
 
         <Route
           path="/admin"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRole="admin">
               <AdminPanel />
             </ProtectedRoute>
           }
@@ -25,7 +31,7 @@ function App() {
         <Route
           path="/admin/create"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRole="admin">
               <VenueCreator />
             </ProtectedRoute>
           }
@@ -34,7 +40,7 @@ function App() {
         <Route
           path="/admin/venues"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRole="admin">
               <VenueList />
             </ProtectedRoute>
           }
@@ -43,8 +49,17 @@ function App() {
         <Route
           path="/websocket"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRole="admin">
               <WebSocketPanel />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/buy"
+          element={
+            <ProtectedRoute allowedRole="customer">
+              <BuyerView />
             </ProtectedRoute>
           }
         />
