@@ -7,8 +7,7 @@ const supabase = require("./src/services/supabase");
 
 const recintosRoutes = require('./src/routes/recintos.routes');
 const asientosRoutes = require('./src/routes/asientos.routes');
-
-
+const ticketsRoutes = require('./src/routes/tickets.routes');
 
 const app = express();  
 const server = http.createServer(app);
@@ -29,6 +28,7 @@ app.use(express.json());
 
 app.use('/recintos', recintosRoutes);
 app.use('/asientos', asientosRoutes);
+app.use('/tickets', ticketsRoutes);
 
 app.get("/", (req, res) => {
   res.json({ message: "EventMaster API running" });
