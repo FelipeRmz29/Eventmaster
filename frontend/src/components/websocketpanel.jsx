@@ -7,7 +7,7 @@ export default function WebSocketPanel() {
   const [status, setStatus] = useState("Connecting...");
 
   useEffect(() => {
-    const socket = new window.WebSocket("ws://localhost:8080");
+    const socket = new window.WebSocket("ws://localhost:3000");
     socketRef.current = socket;
 
     socket.onopen = () => setStatus("Online");
