@@ -8,8 +8,9 @@ const authRoutes = require('./src/routes/auth');
 const adminRoutes = require('./src/routes/admin');
 const recintosRoutes = require('./src/routes/recintos.routes');
 const asientosRoutes = require('./src/routes/asientos.routes');
+const ticketsRoutes = require('./src/routes/tickets.routes');
 
-const app = express();
+const app = express();  
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
@@ -31,6 +32,7 @@ app.get('/', (req, res) => res.json({ message: 'EventMaster API running' }));
 app.use('/api', authRoutes);
 app.use('/recintos', recintosRoutes);
 app.use('/asientos', asientosRoutes);
+app.use('/tickets', ticketsRoutes);
 
 // Rutas protegidas
 app.use('/api/admin', adminRoutes);
