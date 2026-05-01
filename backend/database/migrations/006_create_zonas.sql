@@ -1,0 +1,5 @@
+CREATE TABLE zonas (
+    id SERIAL PRIMARY KEY,
+    nombre VARCHAR(50) NOT NULL,
+    precio DECIMAL(10,2) NOT NULL
+);
