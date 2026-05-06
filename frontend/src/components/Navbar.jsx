@@ -24,6 +24,7 @@ function Navbar() {
           {role === "admin" && <Link to="/admin">Admin</Link>}
           {role === "admin" && <Link to="/admin/create">Recintos</Link>}
           {role === "customer" && <Link to="/buy">Comprar</Link>}
+          <Link to="/verificar">Verificar</Link>
           {role === "admin" && <Link to="/websocket">Realtime</Link>}
         </nav>
 

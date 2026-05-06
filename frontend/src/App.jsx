@@ -8,6 +8,7 @@ import AdminPanel from "./pages/AdminPanel";
 import VenueCreator from "./pages/VenueCreator";
 import VenueList from "./pages/VenueList";
 import BuyerView from "./pages/BuyerView";
+import TicketVerifier from "./pages/TicketVerifier";
 import WebSocketPanel from "./components/websocketpanel";
 
 function App() {
@@ -18,6 +19,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/verificar" element={<TicketVerifier />} />
 
         <Route
           path="/admin"
