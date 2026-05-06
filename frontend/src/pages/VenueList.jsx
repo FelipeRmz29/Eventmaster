@@ -1,52 +1,46 @@
-import { Link } from "react-router-dom";
+import { ButtonLink, Card, EmptyState, SectionHeader, StatCard } from "../components/ui.jsx";
 import { loadMapFromLocalStorage } from "../data/storage";
 
 function VenueList() {
   const map = loadMapFromLocalStorage();
+  const rows = map?.length || 0;
+  const cols = map?.[0]?.length || 0;
+  const seats = rows * cols;
 
   return (
-    <div className="page-container">
-      <div className="brand-block">
-        <h1>
-          Recintos <span className="brand-highlight">guardados</span>
-        </h1>
-        <p>Resumen de configuraciones creadas dentro del sistema.</p>
-      </div>
+    <main className="page-container admin-page">
+      <SectionHeader
+        eyebrow="Inventario"
+        title="Recintos guardados"
+        description="Resumen del mapa de asientos actualmente almacenado para la demo."
+        actions={<ButtonLink to="/admin/create">Crear o editar</ButtonLink>}
+      />
 
-      <div className="section-card" style={{ marginTop: "24px" }}>
-        <h2 className="section-title">Inventario de layout</h2>
-        <p className="section-subtitle">
-          Consulta la información del mapa actualmente almacenado.
-        </p>
-
-        {map ? (
-          <div className="card-box">
-            <div className="stats-line">
-              <div className="stat-pill">Filas: {map.length}</div>
-              <div className="stat-pill">Columnas: {map[0]?.length || 0}</div>
-              <div className="stat-pill">
-                Total asientos: {map.length * (map[0]?.length || 0)}
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="card-box">
-            <p className="empty-state">No hay recintos guardados todavía.</p>
-          </div>
-        )}
-
-        <div className="button-group">
-          <Link to="/admin/create" className="main-button">
-            Crear o editar recinto
-          </Link>
-          <Link to="/admin" className="main-button ghost">
-            Volver al panel
-          </Link>
+      {map ? (
+        <div className="metrics-grid">
+          <StatCard label="Filas" value={rows} helper="Configuradas" />
+          <StatCard label="Columnas" value={cols} helper="Por fila" />
+          <StatCard label="Asientos" value={seats} helper="Capacidad total" tone="success" />
+          <StatCard label="Estado" value="Local" helper="Guardado en este navegador" tone="warning" />
         </div>
-      </div>
-    </div>
+      ) : (
+        <EmptyState
+          title="No hay recintos guardados todavía."
+          description="Crea un mapa de asientos para activar la seleccion visual del comprador."
+          action={<ButtonLink to="/admin/create">Crear recinto</ButtonLink>}
+        />
+      )}
+
+      <Card className="venue-note">
+        <h2>Siguiente paso recomendado</h2>
+        <p>
+          Conectar estos layouts a Supabase para que los recintos, eventos y asientos
+          queden persistidos entre dispositivos.
+        </p>
+        <ButtonLink to="/admin" variant="ghost">Volver al panel</ButtonLink>
+      </Card>
+    </main>
   );
 }
 
 export default VenueList;
-

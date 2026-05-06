@@ -1,23 +1,17 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import SeatGrid from "../components/SeatGrid";
-import {
-  saveMapToLocalStorage,
-  loadMapFromLocalStorage,
-} from "../data/storage";
+import { Button, ButtonLink, Card, Input, SectionHeader } from "../components/ui.jsx";
+import { saveMapToLocalStorage, loadMapFromLocalStorage } from "../data/storage";
 import { connectSocket } from "../services/socket";
 
 function VenueCreator() {
   const [rows, setRows] = useState(6);
   const [cols, setCols] = useState(8);
   const [grid, setGrid] = useState(() => loadMapFromLocalStorage() || []);
+  const [saveStatus, setSaveStatus] = useState("");
 
   useEffect(() => {
     const socket = connectSocket();
-
-    socket.onopen = () => {
-      console.log("Conectado al WebSocket");
-    };
 
     socket.onmessage = (event) => {
       try {
@@ -27,9 +21,7 @@ function VenueCreator() {
           setGrid((prevGrid) =>
             prevGrid.map((row) =>
               row.map((seat) =>
-                seat.id === data.seat.id
-                  ? { ...seat, status: data.seat.status }
-                  : seat
+                seat.id === data.seat.id ? { ...seat, status: data.seat.status } : seat
               )
             )
           );
@@ -42,19 +34,15 @@ function VenueCreator() {
     socket.onerror = () => {
       console.error("Error en WebSocket");
     };
-
-    socket.onclose = () => {
-      console.log("WebSocket desconectado");
-    };
   }, []);
 
   const generateGrid = () => {
     const newGrid = [];
 
-    for (let i = 0; i < rows; i++) {
+    for (let i = 0; i < rows; i += 1) {
       const row = [];
 
-      for (let j = 0; j < cols; j++) {
+      for (let j = 0; j < cols; j += 1) {
         row.push({
           id: `${i}-${j}`,
           label: `${String.fromCharCode(65 + i)}${j + 1}`,
@@ -66,119 +54,85 @@ function VenueCreator() {
     }
 
     setGrid(newGrid);
+    setSaveStatus("");
   };
 
   const handleSave = () => {
     saveMapToLocalStorage(grid);
-    alert("Configuración del recinto guardada correctamente.");
+    setSaveStatus("Configuración del recinto guardada correctamente.");
   };
 
   const handleSeatClick = (clickedSeat) => {
     if (clickedSeat.status === "occupied") return;
 
-    const newStatus =
-      clickedSeat.status === "available" ? "selected" : "available";
-
     const updatedSeat = {
       ...clickedSeat,
-      status: newStatus,
+      status: clickedSeat.status === "available" ? "selected" : "available",
     };
 
     setGrid((prevGrid) =>
       prevGrid.map((row) =>
-        row.map((seat) =>
-          seat.id === clickedSeat.id ? updatedSeat : seat
-        )
+        row.map((seat) => (seat.id === clickedSeat.id ? updatedSeat : seat))
       )
     );
 
     const socket = connectSocket();
 
     if (socket.readyState === WebSocket.OPEN) {
-      socket.send(
-        JSON.stringify({
-          type: "seat_update",
-          seat: updatedSeat,
-        })
-      );
+      socket.send(JSON.stringify({ type: "seat_update", seat: updatedSeat }));
     }
   };
 
   return (
-    <div className="page-container">
-      <div className="brand-block">
-        <h1>
-          Diseñador de <span className="brand-highlight">recintos</span>
-        </h1>
-        <p>
-          Configura el layout de asientos para ofrecer una experiencia de compra
-          profesional en EventMaster.
-        </p>
-      </div>
+    <main className="page-container admin-page">
+      <SectionHeader
+        eyebrow="Recintos"
+        title="Diseñador de asientos"
+        description="Define filas, columnas y disponibilidad visual para la experiencia de compra."
+        actions={<ButtonLink to="/admin/venues" variant="ghost">Ver recintos</ButtonLink>}
+      />
 
-      <div className="form-card">
-        <h2 className="section-title">Configuración del venue</h2>
-        <p className="section-subtitle">
-          Define el tamaño del recinto y genera el mapa visual de asientos.
-        </p>
-
-        <div className="form-row">
-          <div className="form-group">
-            <label>Filas</label>
-            <input
+      <div className="creator-layout">
+        <Card className="creator-controls">
+          <h2>Configuración</h2>
+          <div className="form-row">
+            <Input
+              label="Filas"
               type="number"
               min="1"
               value={rows}
-              onChange={(e) => setRows(Number(e.target.value))}
+              onChange={(event) => setRows(Number(event.target.value))}
             />
-          </div>
-
-          <div className="form-group">
-            <label>Columnas</label>
-            <input
+            <Input
+              label="Columnas"
               type="number"
               min="1"
               value={cols}
-              onChange={(e) => setCols(Number(e.target.value))}
+              onChange={(event) => setCols(Number(event.target.value))}
             />
           </div>
-        </div>
 
-        <div className="button-group">
-          <button className="main-button" onClick={generateGrid}>
-            Generar layout
-          </button>
+          <div className="button-group">
+            <Button onClick={generateGrid}>Generar layout</Button>
+            <Button onClick={handleSave} variant="secondary" disabled={!grid.length}>
+              Guardar configuración
+            </Button>
+          </div>
+          {saveStatus && <p className="success-note">{saveStatus}</p>}
+        </Card>
 
-          <button className="main-button secondary" onClick={handleSave}>
-            Guardar configuración
-          </button>
-
-          <Link to="/admin/venues" className="main-button ghost">
-            Ver recintos
-          </Link>
-        </div>
-
-        <div className="venue-layout">
+        <Card className="seat-map-card">
           <div className="stage-banner">ESCENARIO</div>
           <SeatGrid grid={grid} onSeatClick={handleSeatClick} />
-
           <div className="legend-row">
-            <div className="legend-item">
-              <span className="legend-color available"></span>
-              Disponible
-            </div>
-            <div className="legend-item">
-              <span className="legend-color selected"></span>
-              Seleccionado
-            </div>
-            <div className="legend-item">
-              <span className="legend-color occupied"></span>
-              Ocupado
-            </div>
+            <div className="legend-item"><span className="legend-color available" />Disponible</div>
+            <div className="legend-item"><span className="legend-color selected" />Seleccionado</div>
+            <div className="legend-item"><span className="legend-color occupied" />Ocupado</div>
+            <div className="legend-item"><span className="legend-color reserved" />Reservado</div>
           </div>
-        </div>
+        </Card>
       </div>
-    </div>
+    </main>
   );
 }
 

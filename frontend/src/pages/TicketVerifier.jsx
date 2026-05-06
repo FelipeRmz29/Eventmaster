@@ -1,19 +1,20 @@
 import { useEffect, useRef, useState } from "react";
 import { BrowserQRCodeReader } from "@zxing/browser";
+import { Badge, Button, Card, SectionHeader } from "../components/ui.jsx";
 import { verifyTicket } from "../services/tickets";
 
 const RESULT_COPY = {
   valid: {
-    title: "VÁLIDO",
-    message: "Boleto válido. Acceso permitido.",
+    title: "BOLETO VALIDO",
+    message: "Boleto valido. Acceso permitido.",
   },
   used: {
-    title: "USADO",
+    title: "BOLETO YA UTILIZADO",
     message: "Este boleto ya fue usado.",
   },
   invalid: {
-    title: "FALSO / INVÁLIDO",
-    message: "Boleto inválido o no encontrado.",
+    title: "BOLETO INVALIDO",
+    message: "Boleto invalido o no encontrado.",
   },
   error: {
     title: "ERROR",
@@ -45,7 +46,10 @@ function TicketVerifier() {
   const lastScanRef = useRef({ token: "", scannedAt: 0 });
 
   const [accessCode, setAccessCode] = useState(
-    () => localStorage.getItem("eventmaster_verifier_code") || ""
+    () =>
+      sessionStorage.getItem("eventmaster_verifier_code") ||
+      localStorage.getItem("eventmaster_verifier_code") ||
+      ""
   );
   const [isScanning, setIsScanning] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -69,6 +73,12 @@ function TicketVerifier() {
       }
     };
   }, []);
+
+  const vibrateForStatus = (status) => {
+    if (!navigator.vibrate) return;
+
+    navigator.vibrate(status === "valid" ? [100] : [100, 50, 100]);
+  };
 
   const handleScanResult = async (rawToken, controls) => {
     const token = rawToken?.trim();
@@ -95,11 +105,13 @@ function TicketVerifier() {
     try {
       const verification = await verifyTicket(token, accessCode.trim());
       setResult(verification);
+      vibrateForStatus(verification.status);
     } catch (error) {
       setResult({
         status: "error",
         message: error.message || RESULT_COPY.error.message,
       });
+      vibrateForStatus("error");
     } finally {
       validatingRef.current = false;
       setIsLoading(false);
@@ -110,7 +122,7 @@ function TicketVerifier() {
     if (!accessCode.trim()) {
       setResult({
         status: "error",
-        message: "Ingresa el código de acceso del personal.",
+        message: "Ingresa el codigo de acceso del personal.",
       });
       return;
     }
@@ -118,15 +130,16 @@ function TicketVerifier() {
     if (!navigator.mediaDevices?.getUserMedia) {
       setResult({
         status: "error",
-        message: "Este navegador no soporta acceso a la cámara.",
+        message: "Este navegador no soporta acceso a la camara.",
       });
       return;
     }
 
-    localStorage.setItem("eventmaster_verifier_code", accessCode.trim());
+    sessionStorage.setItem("eventmaster_verifier_code", accessCode.trim());
+    localStorage.removeItem("eventmaster_verifier_code");
     stopScanner();
     setResult(null);
-    setCameraMessage("Solicitando permiso de cámara...");
+    setCameraMessage("Solicitando permiso de camara...");
     setIsScanning(true);
 
     try {
@@ -149,7 +162,7 @@ function TicketVerifier() {
       );
 
       controlsRef.current = controls;
-      setCameraMessage("Apunta la cámara al código QR del boleto.");
+      setCameraMessage("Apunta la camara al codigo QR del boleto.");
     } catch (error) {
       setIsScanning(false);
       controlsRef.current = null;
@@ -158,8 +171,8 @@ function TicketVerifier() {
         status: "error",
         message:
           error.name === "NotAllowedError"
-            ? "Permiso de cámara denegado."
-            : "No se pudo iniciar la cámara.",
+            ? "Permiso de camara denegado."
+            : "No se pudo iniciar la camara.",
       });
     }
   };
@@ -175,24 +188,30 @@ function TicketVerifier() {
   const resultCopy = getResultCopy(result);
 
   return (
-    <div className="page-container verifier-page">
+    <main className="page-container verifier-page">
       <section className="verifier-shell">
-        <div className="brand-block">
-          <h1>Verificación de boletos</h1>
-          <p>Escanea el QR del boleto para validar el acceso.</p>
-        </div>
+        <SectionHeader
+          eyebrow="EventMaster · Verificacion"
+          title="Verificacion de boletos"
+          description="Escanea el QR del boleto para validar el acceso desde celular o navegador."
+        />
 
-        <div className="verifier-card">
-          <div className="form-group verifier-code">
-            <label>Código de acceso</label>
+        <Card className="verifier-card">
+          <div className="verifier-topline">
+            <Badge tone="info">PWA mobile-first</Badge>
+            <span>Camara trasera preferida</span>
+          </div>
+
+          <label className="ui-field verifier-code">
+            <span>Codigo de acceso</span>
             <input
               type="password"
               value={accessCode}
               onChange={(event) => setAccessCode(event.target.value)}
-              placeholder="Código del personal"
+              placeholder="Codigo del personal"
               autoComplete="current-password"
             />
-          </div>
+          </label>
 
           <div className="scanner-frame">
             <video
@@ -203,47 +222,61 @@ function TicketVerifier() {
             />
 
             {isScanning ? (
-              <div className="scanner-target" aria-hidden="true" />
+              <>
+                <div className="scanner-target" aria-hidden="true" />
+                <div className="scanner-line" aria-hidden="true" />
+              </>
             ) : (
               <div className="scanner-placeholder">
+                <img src="/illustrations/scanner-qr-illustration.png" alt="" aria-hidden="true" />
                 <span>QR</span>
               </div>
             )}
           </div>
 
-          {cameraMessage && (
-            <p className="scanner-status">{cameraMessage}</p>
-          )}
+          {cameraMessage && <p className="scanner-status">{cameraMessage}</p>}
 
           <div className="button-group verifier-actions">
             {!isScanning ? (
-              <button
-                className="main-button"
-                onClick={startScanner}
-                disabled={isLoading}
-              >
-                {isLoading ? "Validando..." : "Escanear QR"}
-              </button>
+              <Button onClick={startScanner} loading={isLoading} disabled={isLoading}>
+                Escanear QR
+              </Button>
             ) : (
-              <button className="main-button ghost" onClick={stopScanner}>
+              <Button variant="ghost" onClick={stopScanner}>
                 Cancelar
-              </button>
+              </Button>
             )}
 
-            <button className="main-button secondary" onClick={resetScanner}>
+            <Button variant="secondary" onClick={resetScanner}>
               Escanear otro boleto
-            </button>
+            </Button>
           </div>
 
           {resultCopy && (
             <div className={`verification-result ${resultCopy.status}`}>
               <strong>{resultCopy.title}</strong>
               <p>{resultCopy.message}</p>
+              {result?.ticket && (
+                <dl className="ticket-safe-data">
+                  <div>
+                    <dt>Ticket</dt>
+                    <dd>{result.ticket.id}</dd>
+                  </div>
+                  <div>
+                    <dt>Evento</dt>
+                    <dd>{result.ticket.evento_id || "N/D"}</dd>
+                  </div>
+                  <div>
+                    <dt>Asiento</dt>
+                    <dd>{result.ticket.asiento_id || "N/D"}</dd>
+                  </div>
+                </dl>
+              )}
             </div>
           )}
-        </div>
+        </Card>
       </section>
-    </div>
+    </main>
   );
 }
 
