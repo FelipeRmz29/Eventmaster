@@ -1,22 +1,79 @@
-// src/services/ticketsService.js
+const supabase = require('./supabase');
 
-const supabase = require('./supabase'); // Tu cliente de Supabase ya configurado
-
+// Obtener ticket por ID
 const getTicketById = async (id) => {
   const { data, error } = await supabase
-    .from('tickets')      // Tabla a consultar
-    .select('*')          // Trae todas las columnas
-    .eq('id', id)         // WHERE id = :id
-    .single();            // Espera exactamente un resultado (devuelve null si no existe)
+    .from('tickets')
+    .select('*')
+    .eq('id', id)
+    .single();
 
   if (error) {
-    // .single() lanza error si no encuentra nada — lo ignoramos aquí
-    // y dejamos que el controlador maneje el null
-    if (error.code === 'PGRST116') return null; // Código de Supabase: "no rows found"
-    throw error; // Cualquier otro error sí lo lanzamos
+    if (error.code === 'PGRST116') return null;
+    throw error;
   }
 
-  return data; // Devuelve el objeto ticket
+  return data;
 };
 
-module.exports = { getTicketById };
+// Confirmar compra y crear ticket
+const confirmarCompra = async ({ usuario_id, evento_id, asiento_id, precio }) => {
+
+  // 1. Verificar que el asiento sigue disponible
+  const { data: asiento, error: errorAsiento } = await supabase
+    .from('asientos')
+    .select('estado')
+    .eq('id', asiento_id)
+    .single();
+
+  if (errorAsiento) throw errorAsiento;
+
+  if (asiento.estado !== 'disponible') {
+    const err = new Error('El asiento ya no está disponible');
+    err.tipo = 'ASIENTO_NO_DISPONIBLE';
+    throw err;
+  }
+
+  // 2. Marcar el asiento como ocupado
+  const { error: errorUpdate } = await supabase
+    .from('asientos')
+    .update({ estado: 'ocupado' })
+    .eq('id', asiento_id);
+
+  if (errorUpdate) throw errorUpdate;
+
+  // 3. Crear el ticket
+  const { data: ticket, error: errorTicket } = await supabase
+    .from('tickets')
+    .insert({
+      usuario_id,
+      evento_id,
+      asiento_id,
+      precio,
+      estado: 'valido',
+      usado_en: null
+    })
+    .select(`
+      *,
+      asientos (fila, numero, zona),
+      eventos (nombre, fecha)
+    `)
+    .single();
+
+  if (errorTicket) {
+    // Revertir el asiento a disponible antes de lanzar el error
+    await supabase
+      .from('asientos')
+      .update({ estado: 'disponible' })
+      .eq('id', asiento_id);
+
+    throw errorTicket;
+  }
+
+  return ticket;
+};
+
+module.exports = {
+  getTicketById,
+  confirmarCompra
+};  
