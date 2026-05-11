@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
+import QRCode from "qrcode";
 import { Badge, Button, ButtonLink, Card, Input, SectionHeader } from "../components/ui.jsx";
 import { formatCurrency, getEventBySlug } from "../data/events";
 import { applySeatUpdates, createSocketSeat } from "../data/seats";
@@ -18,9 +19,36 @@ function CheckoutTicket() {
 
   const [buyer, setBuyer] = useState({ name: "", email: "" });
   const [ticket, setTicket] = useState(null);
+  const [qrSrc, setQrSrc] = useState("");
   const subtotal = storedSeats.length * event.priceFrom;
   const serviceFee = Math.round(subtotal * 0.1);
   const total = subtotal + serviceFee;
+
+  useEffect(() => {
+    if (!ticket) return undefined;
+
+    let isActive = true;
+
+    QRCode.toDataURL(ticket.token, {
+      errorCorrectionLevel: "M",
+      margin: 2,
+      width: 280,
+      color: {
+        dark: "#020617",
+        light: "#ffffff",
+      },
+    })
+      .then((dataUrl) => {
+        if (isActive) setQrSrc(dataUrl);
+      })
+      .catch(() => {
+        if (isActive) setQrSrc("");
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [ticket]);
 
   const handleConfirm = (eventForm) => {
     eventForm.preventDefault();
@@ -137,10 +165,20 @@ function CheckoutTicket() {
                     : "General"}
                 </strong>
               </div>
-              <div className="ticket-qr" aria-label="Vista previa QR">
-                <span>{ticket.token.slice(-6)}</span>
+              <div className="ticket-verification">
+                <div className="ticket-qr" aria-label="Codigo QR del boleto">
+                  {qrSrc ? (
+                    <img src={qrSrc} alt={`QR de boleto ${ticket.token}`} />
+                  ) : (
+                    <span>Generando QR</span>
+                  )}
+                </div>
+                <div className="ticket-verification-copy">
+                  <span>Codigo de validacion</span>
+                  <code>ID: {ticket.token}</code>
+                  <small>Escanea este codigo para validar el acceso.</small>
+                </div>
               </div>
-              <code>ID: {ticket.token}</code>
               <div className="ticket-actions">
                 <Button variant="secondary" onClick={() => window.print()}>Descargar boleto</Button>
                 <Button variant="ghost" onClick={handleShare}>Compartir</Button>
