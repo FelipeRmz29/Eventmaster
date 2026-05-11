@@ -5,6 +5,11 @@ const cors = require("cors");
 const http = require("http");
 const WebSocket = require("ws");
 const supabase = require("./src/services/supabase");
+const authRoutes = require("./src/routes/auth");
+const adminRoutes = require("./src/routes/admin");
+const recintosRoutes = require("./src/routes/recintos.routes");
+const asientosRoutes = require("./src/routes/asientos.routes");
+const ticketsRoutes = require("./src/routes/tickets.routes");
 
 const app = express();
 const server = http.createServer(app);
@@ -36,14 +41,13 @@ const wss = new WebSocket.Server({
   },
 });
 
-// Prueba de conexión a Supabase
 supabase
-  .from("usuarios")
+  .from("recintos")
   .select("id")
   .limit(1)
   .then(({ error }) => {
-    if (error) console.error("Error de conexión:", error.message);
-    else console.log("Supabase conectado ✓");
+    if (error) console.error("Error de conexion:", error.message);
+    else console.log("Supabase conectado");
   });
 
 app.use(
@@ -51,8 +55,8 @@ app.use(
     origin: (origin, callback) => {
       callback(null, isOriginAllowed(origin));
     },
-    methods: ["GET", "POST", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "X-Verifier-Access-Code"],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Authorization", "Content-Type", "X-Verifier-Access-Code"],
     maxAge: 600,
   })
 );
@@ -67,7 +71,7 @@ app.use((error, req, res, next) => {
   if (error?.type === "entity.too.large") {
     return res.status(413).json({
       status: "error",
-      message: "La solicitud excede el tamaño permitido.",
+      message: "La solicitud excede el tamano permitido.",
     });
   }
 
@@ -81,9 +85,12 @@ app.use((error, req, res, next) => {
   return next(error);
 });
 
-app.get("/", (req, res) => {
-  res.json({ message: "EventMaster API running" });
-});
+app.get("/", (req, res) => res.json({ message: "EventMaster API running" }));
+app.use("/api", authRoutes);
+app.use("/recintos", recintosRoutes);
+app.use("/asientos", asientosRoutes);
+app.use("/tickets", ticketsRoutes);
+app.use("/api/admin", adminRoutes);
 
 const MAX_RAW_TOKEN_LENGTH = 2048;
 const MAX_TICKET_TOKEN_LENGTH = 255;
@@ -168,7 +175,7 @@ app.post("/api/tickets/verify", async (req, res) => {
   }
 
   if (!expectedAccessCode) {
-    console.error("VERIFIER_ACCESS_CODE no está configurado.");
+    console.error("VERIFIER_ACCESS_CODE no esta configurado.");
     return res.status(500).json({
       status: "error",
       message: "No se pudo verificar el boleto.",
@@ -178,7 +185,7 @@ app.post("/api/tickets/verify", async (req, res) => {
   if (!safeCompare(accessCode, expectedAccessCode)) {
     return res.status(401).json({
       status: "error",
-      message: "Código de acceso incorrecto.",
+      message: "Codigo de acceso incorrecto.",
     });
   }
 
@@ -208,7 +215,7 @@ app.post("/api/tickets/verify", async (req, res) => {
     if (updatedTicket) {
       return res.json({
         status: "valid",
-        message: "Boleto válido. Acceso permitido.",
+        message: "Boleto valido. Acceso permitido.",
         ticket: buildSafeTicket(updatedTicket),
       });
     }
@@ -224,7 +231,7 @@ app.post("/api/tickets/verify", async (req, res) => {
     if (!existingTicket || existingTicket.status === "cancelled") {
       return res.json({
         status: "invalid",
-        message: "Boleto inválido o no encontrado.",
+        message: "Boleto invalido o no encontrado.",
       });
     }
 
@@ -238,7 +245,7 @@ app.post("/api/tickets/verify", async (req, res) => {
 
     return res.json({
       status: "invalid",
-      message: "Boleto inválido o no encontrado.",
+      message: "Boleto invalido o no encontrado.",
     });
   } catch (error) {
     console.error("Error al verificar boleto:", error.message);
@@ -250,7 +257,9 @@ app.post("/api/tickets/verify", async (req, res) => {
 });
 
 const MAX_WS_MESSAGE_LENGTH = 2048;
+const MAX_CLIENT_ID_LENGTH = 80;
 const allowedSeatStatuses = new Set(["available", "selected", "reserved", "occupied"]);
+const seatState = new Map();
 
 const sanitizeWsMessage = (message) => {
   const text = message.toString();
@@ -268,21 +277,35 @@ const sanitizeWsMessage = (message) => {
       id: String(data.seat.id || "").slice(0, 40),
       label: String(data.seat.label || "").slice(0, 20),
       status: String(data.seat.status || ""),
+      lockedBy: String(data.seat.lockedBy || "").slice(0, MAX_CLIENT_ID_LENGTH),
     };
 
     if (!seat.id || !seat.label || !allowedSeatStatuses.has(seat.status)) {
       return null;
     }
 
-    return JSON.stringify({ type: "seat_update", seat });
+    if (seat.status === "selected" && !seat.lockedBy) {
+      return null;
+    }
+
+    if (seat.status !== "selected") {
+      delete seat.lockedBy;
+    }
+
+    return { type: "seat_update", seat };
   } catch {
-    return text;
+    return null;
   }
 };
 
-// WebSocket
 wss.on("connection", (ws) => {
   console.log("Cliente conectado al WebSocket");
+  ws.send(
+    JSON.stringify({
+      type: "seat_snapshot",
+      seats: Array.from(seatState.values()),
+    })
+  );
 
   ws.on("message", (message) => {
     const sanitizedMessage = sanitizeWsMessage(message);
@@ -292,15 +315,55 @@ wss.on("connection", (ws) => {
       return;
     }
 
+    if (sanitizedMessage.seat.status === "available") {
+      seatState.delete(sanitizedMessage.seat.id);
+    } else {
+      seatState.set(sanitizedMessage.seat.id, sanitizedMessage.seat);
+    }
+
+    if (sanitizedMessage.seat.status === "selected") {
+      ws.clientId = sanitizedMessage.seat.lockedBy;
+    }
+
+    const payload = JSON.stringify(sanitizedMessage);
+
     wss.clients.forEach((client) => {
       if (client.readyState === WebSocket.OPEN) {
-        client.send(sanitizedMessage);
+        client.send(payload);
       }
     });
   });
 
   ws.on("close", () => {
     console.log("Cliente desconectado del WebSocket");
+
+    if (!ws.clientId) return;
+
+    const releasedSeats = [];
+
+    seatState.forEach((seat, seatId) => {
+      if (seat.status === "selected" && seat.lockedBy === ws.clientId) {
+        seatState.delete(seatId);
+        releasedSeats.push({
+          type: "seat_update",
+          seat: {
+            id: seat.id,
+            label: seat.label,
+            status: "available",
+          },
+        });
+      }
+    });
+
+    releasedSeats.forEach((releasedSeat) => {
+      const payload = JSON.stringify(releasedSeat);
+
+      wss.clients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(payload);
+        }
+      });
+    });
   });
 
   ws.on("error", (error) => {

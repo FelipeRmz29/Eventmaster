@@ -1,0 +1,2 @@
+ALTER TABLE tickets
+ADD COLUMN usado_en TIMESTAMP;
