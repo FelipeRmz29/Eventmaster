@@ -2,6 +2,8 @@ import { useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Badge, Button, ButtonLink, Card, Input, SectionHeader } from "../components/ui.jsx";
 import { formatCurrency, getEventBySlug } from "../data/events";
+import { applySeatUpdates, createSocketSeat } from "../data/seats";
+import { sendSocketMessage } from "../services/socket";
 
 function CheckoutTicket() {
   const { eventSlug } = useParams();
@@ -23,18 +25,41 @@ function CheckoutTicket() {
   const handleConfirm = (eventForm) => {
     eventForm.preventDefault();
 
+    const occupiedSeats = storedSeats.map((seat) => ({
+      ...seat,
+      status: "occupied",
+      lockedBy: undefined,
+    }));
     const token = `EM-${event.id}-${Date.now().toString(36).toUpperCase()}`;
     const nextTicket = {
       token,
       buyer,
       eventTitle: event.title,
-      eventDate: `${event.dateLabel} · ${event.timeLabel}`,
-      venue: `${event.venue} · ${event.city}`,
-      seats: storedSeats,
+      eventDate: `${event.dateLabel} - ${event.timeLabel}`,
+      venue: `${event.venue} - ${event.city}`,
+      seats: occupiedSeats,
       status: "Activo",
     };
 
+    try {
+      const savedMap = JSON.parse(localStorage.getItem("eventmaster_map") || "null");
+
+      if (savedMap) {
+        localStorage.setItem(
+          "eventmaster_map",
+          JSON.stringify(applySeatUpdates(savedMap, occupiedSeats))
+        );
+      }
+    } catch {
+      localStorage.removeItem("eventmaster_map");
+    }
+
+    occupiedSeats.forEach((seat) => {
+      sendSocketMessage({ type: "seat_update", seat: createSocketSeat(seat) });
+    });
+
     localStorage.setItem("eventmaster_last_ticket", JSON.stringify(nextTicket));
+    localStorage.removeItem("eventmaster_selected_seats");
     setTicket(nextTicket);
   };
 
@@ -89,7 +114,7 @@ function CheckoutTicket() {
               <Button disabled={!storedSeats.length}>
                 Confirmar compra
               </Button>
-              <span className="secure-badge">Pago seguro · SSL · Boleto digital con QR</span>
+              <span className="secure-badge">Pago seguro - SSL - Boleto digital con QR</span>
               {!storedSeats.length && (
                 <p className="form-note">Selecciona al menos un asiento antes de confirmar.</p>
               )}
@@ -108,7 +133,7 @@ function CheckoutTicket() {
               <div className="ticket-seat-line">
                 <strong>
                   {ticket.seats.length
-                    ? ticket.seats.map((seat) => seat.label).join(" · ")
+                    ? ticket.seats.map((seat) => seat.label).join(" - ")
                     : "General"}
                 </strong>
               </div>
@@ -128,7 +153,7 @@ function CheckoutTicket() {
         <Card className="order-summary">
           <img src={event.image} alt={event.title} />
           <h3>{event.title}</h3>
-          <p>{event.dateLabel} · {event.venue}</p>
+          <p>{event.dateLabel} - {event.venue}</p>
           <div className="summary-row">
             <span>Asientos</span>
             <strong>{storedSeats.length || 0}</strong>
