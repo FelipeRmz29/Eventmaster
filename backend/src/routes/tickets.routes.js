@@ -8,4 +8,10 @@ router.get('/:id', ticketsController.getTicketById);
 // POST /tickets/confirmar → confirmar compra y crear ticket
 router.post('/confirmar', ticketsController.confirmarCompra);
 
+const ticketsController = require('../controllers/tickets.controller.js');
+
+router.get('/:id', ticketsController.getTicketById);
+
+router.post('/compra', ticketsController.comprarTicket);
+
 module.exports = router;
