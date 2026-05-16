@@ -21,12 +21,13 @@
   },
   "homepage": "https://github.com/FelipeRmz29/Eventmaster#readme",
   "dependencies": {
-    "@supabase/supabase-js": "^2.99.2",
+    "@supabase/supabase-js": "^2.105.4",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
+    "redis": "^5.12.1",
     "qrcode": "^1.5.4",
     "uuid": "^14.0.0",
     "ws": "^8.20.0"
