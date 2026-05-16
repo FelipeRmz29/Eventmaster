@@ -1,23 +1,65 @@
 // src/controllers/ticketsController.js
 
-const ticketsService = require('../services/tickets.service'); // Importa el servicio
+const ticketsService = require('../services/tickets.service');
 
 const getTicketById = async (req, res) => {
-  try {
-    const { id } = req.params; // Extrae el :id de la URL (ej: /tickets/5 → id = "5")
 
-    const ticket = await ticketsService.getTicketById(id); // Llama al servicio
+  try {
+
+    const { id } = req.params;
+
+    const ticket = await ticketsService.getTicketById(id);
 
     if (!ticket) {
-      // Si el servicio devuelve null, el ticket no existe
-      return res.status(404).json({ error: 'Ticket no encontrado' });
+
+      return res.status(404).json({
+        error: 'Ticket no encontrado'
+      });
     }
 
-    res.status(200).json(ticket); // Todo bien → devuelve el ticket
+    res.status(200).json(ticket);
+
   } catch (error) {
+
     console.error('Error al obtener ticket:', error.message);
-    res.status(500).json({ error: 'Error interno del servidor' });
+
+    res.status(500).json({
+      error: 'Error interno del servidor'
+    });
   }
 };
 
-module.exports = { getTicketById };
+const comprarTicket = async (req, res) => {
+
+  try {
+
+    const {
+      usuario_id,
+      evento_id,
+      asiento_id,
+      precio
+    } = req.body;
+
+    const resultado = await ticketsService.comprarTicket({
+      usuario_id,
+      evento_id,
+      asiento_id,
+      precio
+    });
+
+    res.status(201).json(resultado);
+
+  } catch (error) {
+
+    console.error('Error al comprar ticket:', error.message);
+
+    res.status(400).json({
+      error: error.message
+    });
+  }
+};
+
+module.exports = {
+  getTicketById,
+  comprarTicket
+};

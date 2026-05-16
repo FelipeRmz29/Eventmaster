@@ -1,9 +1,12 @@
 // src/routes/tickets.js
 
 const express = require('express');
-const router = express.Router(); // Crea un mini-servidor de rutas
-const ticketsController = require('../controllers/tickets.controller.js'); // Importa el controlador
+const router = express.Router();
 
-router.get('/:id', ticketsController.getTicketById); // GET /tickets/:id
+const ticketsController = require('../controllers/tickets.controller.js');
+
+router.get('/:id', ticketsController.getTicketById);
+
+router.post('/compra', ticketsController.comprarTicket);
 
 module.exports = router;
