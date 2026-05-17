@@ -80,6 +80,38 @@ export const getSeatLabel = (seat, clientId) => {
   return SEAT_STATUS_LABELS[seat.status] || SEAT_STATUS_LABELS.available;
 };
 
+const BACKEND_TO_UI_STATUS = {
+  disponible: "available",
+  ocupado: "occupied",
+  reservada: "reserved",
+  reservado: "reserved",
+};
+
+export const normalizeBackendSeat = (seat) => ({
+  id: String(seat.id),
+  label: `${seat.fila || ""}${seat.numero || ""}`,
+  row: seat.fila || "",
+  number: Number(seat.numero || 0),
+  status: BACKEND_TO_UI_STATUS[seat.estado] || "available",
+  zone: seat.zona || seat.zona_nombre || "",
+  raw: seat,
+});
+
+export const buildSeatGridFromBackend = (seats = []) => {
+  const rows = new Map();
+
+  seats.map(normalizeBackendSeat).forEach((seat) => {
+    const rowKey = seat.row || "General";
+
+    if (!rows.has(rowKey)) rows.set(rowKey, []);
+    rows.get(rowKey).push(seat);
+  });
+
+  return Array.from(rows.entries())
+    .sort(([rowA], [rowB]) => rowA.localeCompare(rowB, "es-MX", { numeric: true }))
+    .map(([, row]) => row.sort((seatA, seatB) => seatA.number - seatB.number));
+};
+
 export const cleanSeatLayoutForStorage = (grid) =>
   grid.map((row) =>
     row.map((seat) => {

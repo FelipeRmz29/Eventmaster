@@ -15,7 +15,6 @@ function fmtFecha(iso) {
   return new Date(iso).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' });
 }
 
-// Convierte fecha ISO a formato que acepta datetime-local input
 function toDatetimeLocal(iso) {
   if (!iso) return '';
   const d = new Date(iso);
@@ -31,10 +30,8 @@ function AdminEventos() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
-  // Formulario crear
   const [crearForm, setCrearForm] = useState(EMPTY_FORM);
 
-  // Formulario editar
   const [editForm, setEditForm] = useState(EMPTY_FORM);
   const [editandoId, setEditandoId] = useState(null);
 
@@ -115,7 +112,6 @@ function AdminEventos() {
     } catch (err) { alert('Error: ' + err.message); }
   };
 
-  // ── Estilos reutilizables ──────────────────────────────
   const btnTab = (t) => ({
     padding: '10px 20px',
     background: tab === t ? 'var(--primary)' : 'rgba(255,255,255,0.06)',
@@ -159,7 +155,6 @@ function AdminEventos() {
         <Link to="/admin" className="main-button ghost">← Panel</Link>
       </div>
 
-      {/* Pestañas */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
         <button style={btnTab('lista')} onClick={() => { setTab('lista'); setError(null); }}>Lista de eventos</button>
         <button style={btnTab('crear')} onClick={() => { setTab('crear'); setError(null); }}>+ Crear evento</button>

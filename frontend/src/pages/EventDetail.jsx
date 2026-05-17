@@ -34,7 +34,7 @@ function EventDetail() {
   const [purchasing, setPurchasing] = useState(false);
   const [purchaseStep, setPurchaseStep] = useState(''); // 'verificando' | 'pagando'
   const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(null); // { ticketIds, referenciaPago }
+  const [success, setSuccess] = useState(null); // { ticketIds, referenciaPago, _msg? }
 
   useEffect(() => {
     const load = async () => {
@@ -61,7 +61,7 @@ function EventDetail() {
     setSelectedSeats((prev) => {
       const ya = prev.find((s) => s.id === seat.id);
       if (ya) return prev.filter((s) => s.id !== seat.id);
-      if (prev.length >= MAX_SEATS) return prev; // límite 2
+      if (prev.length >= MAX_SEATS) return prev;
       return [...prev, seat];
     });
   };
@@ -106,6 +106,21 @@ function EventDetail() {
     }
   };
 
+  const handleShare = async () => {
+    const shareData = {
+      title: evento?.nombre,
+      text: `${evento?.nombre} — EventMaster`,
+      url: window.location.href,
+    };
+    if (navigator.share) {
+      await navigator.share(shareData);
+    } else {
+      await navigator.clipboard.writeText(window.location.href);
+      setSuccess({ referenciaPago: null, _msg: 'Link copiado al portapapeles' });
+      setTimeout(() => setSuccess(null), 3000);
+    }
+  };
+
   if (loading) return <div className="page-container"><p className="empty-state">Cargando evento...</p></div>;
   if (error && !evento) return (
     <div className="page-container">
@@ -134,7 +149,10 @@ function EventDetail() {
           <p>{fecha} · {evento?.recintos?.nombre}</p>
           <p style={{ color: 'var(--text-soft)', fontSize: '0.9rem' }}>{evento?.recintos?.direccion}</p>
         </div>
-        <Link to="/eventos" className="main-button ghost">← Eventos</Link>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="main-button ghost" onClick={handleShare}>Compartir</button>
+          <Link to="/eventos" className="main-button ghost">← Eventos</Link>
+        </div>
       </div>
 
       <div className="section-card" style={{ marginBottom: 20 }}>
@@ -209,7 +227,7 @@ function EventDetail() {
 
       {success && (
         <div style={{ marginTop: 20, background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.4)', borderRadius: 16, padding: '18px 22px', color: 'var(--success)', fontWeight: 600 }}>
-          ¡Compra exitosa! Tu PDF fue descargado automáticamente.
+          {success._msg ?? '¡Compra exitosa! Tu PDF fue descargado automáticamente.'}
           {success.referenciaPago && (
             <span style={{ display: 'block', marginTop: 6, fontSize: '0.88rem', fontWeight: 400, color: 'var(--text-soft)' }}>
               Referencia de pago: {success.referenciaPago}

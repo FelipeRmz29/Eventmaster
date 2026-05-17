@@ -31,6 +31,10 @@ router.post('/login', async (req, res) => {
   }
 
   // Generar token
+  if (!process.env.JWT_SECRET) {
+    return res.status(500).json({ error: 'JWT_SECRET no estÃ¡ configurado' });
+  }
+
   const token = jwt.sign(
     { id: admin.id, email: admin.email, role: 'admin' },
     process.env.JWT_SECRET,

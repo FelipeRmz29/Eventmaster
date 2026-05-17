@@ -10,6 +10,7 @@ const adminRoutes = require("./src/routes/admin");
 const recintosRoutes = require("./src/routes/recintos.routes");
 const asientosRoutes = require("./src/routes/asientos.routes");
 const ticketsRoutes = require("./src/routes/tickets.routes");
+const eventosRoutes = require("./src/routes/eventos.routes");
 
 const app = express();
 const server = http.createServer(app);
@@ -88,6 +89,7 @@ app.use((error, req, res, next) => {
 app.get("/", (req, res) => res.json({ message: "EventMaster API running" }));
 app.use("/api", authRoutes);
 app.use("/recintos", recintosRoutes);
+app.use("/eventos", eventosRoutes);
 app.use("/asientos", asientosRoutes);
 app.use("/tickets", ticketsRoutes);
 app.use("/api/admin", adminRoutes);

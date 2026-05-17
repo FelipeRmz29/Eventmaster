@@ -1,7 +1,8 @@
 import { Navigate } from "react-router-dom";
 
 function ProtectedRoute({ children, allowedRole }) {
-  const isAuthenticated = localStorage.getItem("auth") === "true";
+  const adminToken = localStorage.getItem("adminToken");
+  const isAuthenticated = Boolean(adminToken);
   const userRole = localStorage.getItem("role");
 
   if (!isAuthenticated) {
