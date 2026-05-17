@@ -40,12 +40,7 @@ function Navbar() {
     { to: "/", label: "Inicio" },
     { to: "/events", label: "Explorar" },
     { to: "/verificar", label: "Verificar" },
-    ...(role === "admin"
-      ? [
-          { to: "/admin", label: "Admin" },
-          { to: "/websocket", label: "Realtime" },
-        ]
-      : []),
+    ...(role === "admin" ? [{ to: "/admin", label: "Admin" }] : []),
   ];
 
   const renderLinks = (className = "navbar-links") => (
@@ -66,11 +61,10 @@ function Navbar() {
         </Link>
 
         <form className="navbar-search" onSubmit={handleSearch}>
-          <span aria-hidden="true">Buscar</span>
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Buscar eventos, artistas, recintos..."
+            placeholder="Buscar eventos"
             aria-label="Buscar eventos"
           />
         </form>
@@ -90,16 +84,6 @@ function Navbar() {
           ) : (
             <Link to="/login" className="main-button">
               Ingresar
-            </Link>
-          )}
-
-          {role === "admin" ? (
-            <Link to="/admin/create" className="main-button secondary desktop-cta">
-              Crear evento
-            </Link>
-          ) : (
-            <Link to="/admin" className="main-button secondary desktop-cta">
-              Vender en EventMaster
             </Link>
           )}
 
@@ -131,9 +115,6 @@ function Navbar() {
           />
         </form>
         {renderLinks("mobile-links")}
-        <Link to="/admin" className="main-button secondary" onClick={() => setIsMenuOpen(false)}>
-          Vender en EventMaster
-        </Link>
       </div>
       {isMenuOpen && (
         <button

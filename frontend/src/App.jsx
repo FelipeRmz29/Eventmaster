@@ -11,7 +11,6 @@ import VenueList from "./pages/VenueList";
 import PublicEvents from "./pages/PublicEvents";
 import EventDetail from "./pages/EventDetail";
 import TicketVerifier from "./pages/TicketVerifier";
-import WebSocketPanel from "./components/websocketpanel";
 import PWAInstallBanner from "./components/PWAInstallBanner";
 import QRScanner from "./components/QRScanner";
 
@@ -59,15 +58,6 @@ function App() {
           element={
             <ProtectedRoute allowedRole="admin">
               <VenueList />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/websocket"
-          element={
-            <ProtectedRoute allowedRole="admin">
-              <WebSocketPanel />
             </ProtectedRoute>
           }
         />

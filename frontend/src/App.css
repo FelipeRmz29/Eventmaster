@@ -1364,6 +1364,21 @@ select:focus {
   --seat-glow: rgba(239, 68, 68, 0.58);
 }
 
+/* VIP: morado disponible, mismo rojo al ocuparse */
+.seat-zona-vip.seat-available,
+.seat-zona-vip.available {
+  --seat-main: #7c3aed;
+  --seat-dark: #5b21b6;
+  --seat-glow: rgba(124, 58, 237, 0.65);
+}
+
+.seat-zona-vip.seat-occupied,
+.seat-zona-vip.occupied {
+  --seat-main: #ef4444;
+  --seat-dark: #991b1b;
+  --seat-glow: rgba(239, 68, 68, 0.58);
+}
+
 .seat:hover:not(:disabled) {
   transform: translateY(-5px) scale(1.06);
   filter: saturate(1.08) brightness(1.08);

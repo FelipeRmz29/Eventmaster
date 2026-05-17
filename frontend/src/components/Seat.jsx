@@ -8,10 +8,12 @@ function Seat({ seat, onClick, clientId, editable = false }) {
   const isOwnSelection = isSeatOwnedByClient(seat, clientId);
   const isLocked = !editable && isSeatLockedForClient(seat, clientId);
   const statusLabel = getSeatLabel(seat, clientId);
+  const zona = (seat.zona || seat.zone || "").toLowerCase();
   const className = [
     "seat",
     seat.status,
     `seat-${seat.status}`,
+    zona ? `seat-zona-${zona}` : "",
     isOwnSelection ? "seat-owned" : "",
     isLocked ? "seat-locked" : "",
   ]

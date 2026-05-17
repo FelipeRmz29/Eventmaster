@@ -158,9 +158,9 @@ function EventDetail() {
       <div className="section-card" style={{ marginBottom: 20 }}>
         <h2 className="section-title">Selecciona tu asiento</h2>
         <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
-          <span style={{ background: '#16a34a', color: 'white', padding: '4px 12px', borderRadius: 999, fontSize: '0.82rem' }}>● General disponible</span>
-          <span style={{ background: '#7c3aed', color: 'white', padding: '4px 12px', borderRadius: 999, fontSize: '0.82rem' }}>★ VIP disponible</span>
-          <span style={{ background: '#eab308', color: '#111', padding: '4px 12px', borderRadius: 999, fontSize: '0.82rem' }}>Seleccionado</span>
+          <span style={{ background: '#16a34a', color: 'white', padding: '4px 12px', borderRadius: 999, fontSize: '0.82rem' }}>General</span>
+          <span style={{ background: '#7c3aed', color: 'white', padding: '4px 12px', borderRadius: 999, fontSize: '0.82rem' }}>VIP</span>
+          <span style={{ background: '#eab308', color: '#111', padding: '4px 12px', borderRadius: 999, fontSize: '0.82rem' }}>Reservado</span>
           <span style={{ background: '#ef4444', color: 'white', padding: '4px 12px', borderRadius: 999, fontSize: '0.82rem' }}>Ocupado</span>
           <span style={{ background: 'rgba(255,255,255,0.07)', color: '#94a3b8', padding: '4px 12px', borderRadius: 999, fontSize: '0.82rem', border: '1px solid rgba(148,163,184,0.2)' }}>
             General ${precioGeneral} · VIP ${precioVip}
