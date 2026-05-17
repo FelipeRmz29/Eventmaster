@@ -18,7 +18,7 @@ const enviarTicketPorCorreo = async ({ email, nombre, pdfBuffer, ticketIds }) =>
     html: `
       <p>Hola <strong>${nombre}</strong>,</p>
       <p>Gracias por tu compra. Adjunto encontrarás tu boleto en PDF con el código QR de acceso.</p>
-      <p style="color:#6b7280;font-size:0.9rem;">ID(s) de ticket: ${idsLabel}</p>
+      <p style="color:#6b7280;font-size:0.9rem;">Folio(s) de ticket: ${idsLabel}</p>
       <p>Preséntalo en la entrada del evento.</p>
       <br/>
       <p style="color:#6b7280;font-size:0.85rem;">EventMaster — Plataforma de gestión de eventos</p>
