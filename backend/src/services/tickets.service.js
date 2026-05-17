@@ -1,114 +1,180 @@
 const supabase = require('./supabase');
-const { generarPDFTicket } = require('./pdf.service');
+const { generarPDFTickets } = require('./pdf.service');
+const { acquireSeatLock, releaseSeatLock } = require('./redis');
+const { descifrarQR } = require('./crypto.service');
+
+const simularPago = async ({ total }) => {
+  await new Promise(resolve => setTimeout(resolve, 600));
+  const aprobado = Math.random() > 0.05; // 95% éxito para demo
+  const referencia = `PAY-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+  return { aprobado, referencia };
+};
 
 const getTicketById = async (id) => {
   const { data, error } = await supabase
-    .from("tickets")
-    .select("*")
-    .eq("id", id)
+    .from('tickets')
+    .select('*')
+    .eq('id', id)
     .single();
 
   if (error) {
-    if (error.code === "PGRST116") return null;
+    if (error.code === 'PGRST116') return null;
     throw error;
   }
 
   return data;
 };
 
-const confirmarCompra = async ({ usuario_id, evento_id, asiento_id, precio }) => {
-  const { data: asiento, error: errorAsiento } = await supabase
-    .from("asientos")
-    .select("estado")
-    .eq("id", asiento_id)
-    .single();
-
-  if (errorAsiento) throw errorAsiento;
-
-  if (asiento.estado !== "disponible") {
-    const error = new Error("El asiento ya no esta disponible");
-    error.tipo = "ASIENTO_NO_DISPONIBLE";
-    throw error;
+// asientos: [{ asiento_id, precio }] — máximo 2
+const confirmarCompra = async ({ nombre, email, evento_id, asientos }) => {
+  if (!Array.isArray(asientos) || asientos.length === 0) {
+    throw Object.assign(new Error('Debes seleccionar al menos un asiento'), { tipo: 'VALIDACION' });
+  }
+  if (asientos.length > 2) {
+    throw Object.assign(new Error('Máximo 2 asientos por compra'), { tipo: 'VALIDACION' });
   }
 
-  const { error: errorUpdate } = await supabase
-    .from("asientos")
-    .update({ estado: "ocupado" })
-    .eq("id", asiento_id);
-
-  if (errorUpdate) throw errorUpdate;
-
-  const { data: ticket, error: errorTicket } = await supabase
-    .from("tickets")
-    .insert({
-      usuario_id,
-      evento_id,
-      asiento_id,
-      precio,
-      estado: "valido",
-      usado_en: null,
-    })
-    .select(`
-      *,
-      asientos (fila, numero, zona),
-      eventos (nombre, fecha)
-    `)
-    .single();
-
-  if (errorTicket) {
-    await supabase
-<<<<<<< HEAD
-      .from('asientos')
-      .update({ estado: 'disponible' })
-      .eq('id', asiento_id);
-=======
-      .from("asientos")
-      .update({ estado: "disponible" })
-      .eq("id", asiento_id);
-
->>>>>>> d00a19473be0b09ce112ba12482d8d827880273a
-    throw errorTicket;
-  }
-
-  return ticket;
-};
-
-const comprarTicket = async ({ usuario_id, evento_id, asiento_id, precio }) => {
-  const lockKey = `seat:${asiento_id}`;
-  let lock = true;
-
-  if (redisClient?.isOpen) {
-    lock = await redisClient.set(lockKey, "locked", {
-      NX: true,
-      EX: 10,
-    });
-  }
-
-  if (!lock) {
-    throw new Error("Asiento en proceso de compra");
+  // 1. Adquirir locks en orden para evitar deadlocks
+  const idsLocked = [];
+  for (const { asiento_id } of asientos) {
+    const locked = await acquireSeatLock(asiento_id);
+    if (!locked) {
+      for (const id of idsLocked) await releaseSeatLock(id);
+      throw Object.assign(
+        new Error('Uno de los asientos está siendo procesado por otro usuario'),
+        { tipo: 'ASIENTO_NO_DISPONIBLE' }
+      );
+    }
+    idsLocked.push(asiento_id);
   }
 
   try {
-    const ticket = await confirmarCompra({
-      usuario_id,
-      evento_id,
-      asiento_id,
-      precio,
-    });
-
-    return {
-      success: true,
-      ticket,
-    };
-  } finally {
-    if (redisClient?.isOpen) {
-      await redisClient.del(lockKey);
+    // 2. Verificar disponibilidad de todos los asientos
+    for (const { asiento_id } of asientos) {
+      const { data: asiento, error } = await supabase
+        .from('asientos').select('estado').eq('id', asiento_id).single();
+      if (error) throw error;
+      if (asiento.estado !== 'disponible') {
+        throw Object.assign(
+          new Error('Uno de los asientos ya no está disponible'),
+          { tipo: 'ASIENTO_NO_DISPONIBLE' }
+        );
+      }
     }
+
+    // 3. Simular pago
+    const total = asientos.reduce((sum, a) => sum + Number(a.precio), 0);
+    const pago = await simularPago({ total });
+    if (!pago.aprobado) {
+      throw Object.assign(
+        new Error('El pago fue rechazado. Intenta nuevamente.'),
+        { tipo: 'PAGO_RECHAZADO' }
+      );
+    }
+
+    // 4. Marcar todos los asientos como ocupados
+    for (const { asiento_id } of asientos) {
+      const { error } = await supabase
+        .from('asientos').update({ estado: 'ocupado' }).eq('id', asiento_id);
+      if (error) throw error;
+    }
+
+    // 5. Crear un ticket por asiento
+    const ticketsCreados = [];
+    for (const { asiento_id, precio } of asientos) {
+      const { data: ticket, error } = await supabase
+        .from('tickets')
+        .insert({
+          nombre_comprador: nombre,
+          email_comprador: email,
+          evento_id,
+          asiento_id,
+          precio,
+          estado: 'activo',
+          usado_en: null,
+        })
+        .select('*, asientos(fila, numero, zona), eventos(nombre, fecha)')
+        .single();
+
+      if (error) {
+        // Revertir asientos si falla la inserción
+        for (const { asiento_id: aid } of asientos) {
+          await supabase.from('asientos').update({ estado: 'disponible' }).eq('id', aid);
+        }
+        throw error;
+      }
+      ticketsCreados.push(ticket);
+    }
+
+    // 6. Generar PDF con todos los tickets
+    const pdfBuffer = await generarPDFTickets(ticketsCreados);
+
+    return { tickets: ticketsCreados, pdfBuffer, referenciaPago: pago.referencia };
+  } finally {
+    for (const id of idsLocked) await releaseSeatLock(id);
   }
 };
 
-module.exports = {
-  getTicketById,
-  confirmarCompra,
-  comprarTicket,
+const validarTicket = async (tokenQR) => {
+  let ticketId;
+  try {
+    ticketId = descifrarQR(tokenQR);
+  } catch {
+    return { resultado: 'FALSO' };
+  }
+
+  const { data: ticket, error } = await supabase
+    .from('tickets')
+    .select('*, asientos(fila, numero, zona), eventos(nombre, fecha)')
+    .eq('id', ticketId)
+    .single();
+
+  if (error) {
+    if (error.code === 'PGRST116') return { resultado: 'FALSO' };
+    throw error;
+  }
+
+  if (!ticket) return { resultado: 'FALSO' };
+
+  if (ticket.estado === 'usado') {
+    return {
+      resultado: 'YA_USADO',
+      usado_en: ticket.usado_en,
+      ticket: {
+        id: ticket.id,
+        nombre_comprador: ticket.nombre_comprador,
+        evento: ticket.eventos?.nombre,
+        asiento: `${ticket.asientos?.fila}${ticket.asientos?.numero}`,
+        zona: ticket.asientos?.zona,
+      },
+    };
+  }
+
+  if (ticket.estado === 'activo') {
+    const usado_en = new Date().toISOString();
+    const { error: updateError } = await supabase
+      .from('tickets')
+      .update({ estado: 'usado', usado_en })
+      .eq('id', ticketId)
+      .eq('estado', 'activo');
+
+    if (updateError) throw updateError;
+
+    return {
+      resultado: 'VALIDO',
+      ticket: {
+        id: ticket.id,
+        nombre_comprador: ticket.nombre_comprador,
+        evento: ticket.eventos?.nombre,
+        fecha: ticket.eventos?.fecha,
+        asiento: `${ticket.asientos?.fila}${ticket.asientos?.numero}`,
+        zona: ticket.asientos?.zona,
+        precio: ticket.precio,
+      },
+    };
+  }
+
+  return { resultado: 'FALSO' };
 };
+
+module.exports = { getTicketById, confirmarCompra, validarTicket };
