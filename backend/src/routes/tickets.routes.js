@@ -1,17 +1,11 @@
-const express = require('express');
+const express = require("express");
+const ticketsController = require("../controllers/tickets.controller");
+
 const router = express.Router();
-const ticketsController = require('../controllers/tickets.controller');
 
-// GET /tickets/:id → obtener ticket por ID
-router.get('/:id', ticketsController.getTicketById);
-
-// POST /tickets/confirmar → confirmar compra y crear ticket
-router.post('/confirmar', ticketsController.confirmarCompra);
-
-const ticketsController = require('../controllers/tickets.controller.js');
-
-router.get('/:id', ticketsController.getTicketById);
-
-router.post('/compra', ticketsController.comprarTicket);
+router.post("/confirmar", ticketsController.confirmarCompra);
+router.post("/compra", ticketsController.comprarTicket);
+router.post("/qr", ticketsController.generarQR);
+router.get("/:id", ticketsController.getTicketById);
 
 module.exports = router;

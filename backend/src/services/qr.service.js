@@ -1,14 +1,21 @@
 const crypto = require('crypto');
 const QRCode = require('qrcode');
-const { v4: uuidv4 } = require('uuid');
 
 const ALGORITHM = 'aes-256-cbc';
-// Clave de 32 bytes desde .env
-const SECRET_KEY = Buffer.from(process.env.QR_SECRET_KEY, 'hex'); // 64 chars hex = 32 bytes
+
+function getSecretKey() {
+  const rawSecret = process.env.QR_SECRET_KEY || '';
+
+  if (!/^[a-fA-F0-9]{64}$/.test(rawSecret)) {
+    throw new Error('QR_SECRET_KEY debe ser hex de 64 caracteres.');
+  }
+
+  return Buffer.from(rawSecret, 'hex');
+}
 
 function encryptData(data) {
   const iv = crypto.randomBytes(16);
-  const cipher = crypto.createCipheriv(ALGORITHM, SECRET_KEY, iv);
+  const cipher = crypto.createCipheriv(ALGORITHM, getSecretKey(), iv);
   let encrypted = cipher.update(JSON.stringify(data), 'utf8', 'hex');
   encrypted += cipher.final('hex');
   // Guardamos iv:encrypted para poder desencriptar después
@@ -18,14 +25,14 @@ function encryptData(data) {
 function decryptData(encryptedStr) {
   const [ivHex, encrypted] = encryptedStr.split(':');
   const iv = Buffer.from(ivHex, 'hex');
-  const decipher = crypto.createDecipheriv(ALGORITHM, SECRET_KEY, iv);
+  const decipher = crypto.createDecipheriv(ALGORITHM, getSecretKey(), iv);
   let decrypted = decipher.update(encrypted, 'hex', 'utf8');
   decrypted += decipher.final('utf8');
   return JSON.parse(decrypted);
 }
 
 async function generateTicketQR(ticketData) {
-  const uuid = uuidv4();
+  const uuid = crypto.randomUUID();
   const payload = { uuid, ...ticketData };
   const encrypted = encryptData(payload);
   // Genera el QR como base64 (Data URL) para mandarlo directo al frontend
