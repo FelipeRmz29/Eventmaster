@@ -1,0 +1,38 @@
+{
+  "name": "eventmaster",
+  "version": "1.0.0",
+  "description": "Plataforma web para gestión de boletos en congresos universitarios.",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "jest": {
+    "modulePaths": [
+      "backend/node_modules"
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/FelipeRmz29/Eventmaster.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/FelipeRmz29/Eventmaster/issues"
+  },
+  "homepage": "https://github.com/FelipeRmz29/Eventmaster#readme",
+  "devDependencies": {
+    "jest": "^30.3.0",
+    "supertest": "^7.2.2"
+  },
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "pdfkit": "^0.18.0",
+    "qrcode": "^1.5.4",
+    "ws": "^8.19.0"
+  }
+}

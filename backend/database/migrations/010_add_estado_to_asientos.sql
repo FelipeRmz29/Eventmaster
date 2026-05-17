@@ -1,0 +1,2 @@
+ALTER TABLE asientos
+ADD COLUMN IF NOT EXISTS estado VARCHAR(20) DEFAULT 'disponible';
