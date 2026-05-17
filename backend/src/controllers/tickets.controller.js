@@ -19,26 +19,46 @@ const getTicketById = async (req, res) => {
 const confirmarCompra = async (req, res) => {
   try {
     const { usuario_id, evento_id, asiento_id, precio } = req.body;
+<<<<<<< HEAD
+
+=======
+>>>>>>> d00a19473be0b09ce112ba12482d8d827880273a
     if (!usuario_id || !evento_id || !asiento_id || !precio) {
       return res.status(400).json({
         error: 'Faltan datos. Se requiere: usuario_id, evento_id, asiento_id, precio'
       });
     }
 
-    const ticket = await ticketsService.confirmarCompra({
+    const { ticket, pdfBuffer } = await ticketsService.confirmarCompra({
       usuario_id,
       evento_id,
       asiento_id,
       precio
     });
 
+<<<<<<< HEAD
+    // Enviar el PDF como descarga
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="ticket-${ticket.id}.pdf"`,
+      'Content-Length': pdfBuffer.length,
+      'X-Ticket-Id': ticket.id  // mandamos el ID en el header por si el frontend lo necesita
+    });
+
+    res.send(pdfBuffer);
+
+=======
     return res.status(201).json({ mensaje: 'Compra confirmada exitosamente', ticket });
+>>>>>>> d00a19473be0b09ce112ba12482d8d827880273a
   } catch (error) {
     if (error.tipo === 'ASIENTO_NO_DISPONIBLE') {
       return res.status(409).json({
         error: 'Lo sentimos, ese asiento ya fue adquirido por otro usuario.'
       });
     }
+<<<<<<< HEAD
+    res.status(500).json({ error: error.message });
+=======
     console.error('Error confirmarCompra:', error.message);
     return res.status(500).json({ error: 'Error interno del servidor' });
   }
@@ -73,8 +93,10 @@ const generarQR = async (req, res) => {
   } catch (error) {
     console.error('Error generando QR:', error.message);
     return res.status(500).json({ error: 'Error al generar el QR' });
+>>>>>>> d00a19473be0b09ce112ba12482d8d827880273a
   }
 };
+
 
 module.exports = {
   getTicketById,

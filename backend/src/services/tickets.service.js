@@ -1,5 +1,5 @@
-const supabase = require("./supabase");
-const redisClient = require("./redis");
+const supabase = require('./supabase');
+const { generarPDFTicket } = require('./pdf.service');
 
 const getTicketById = async (id) => {
   const { data, error } = await supabase
@@ -57,10 +57,16 @@ const confirmarCompra = async ({ usuario_id, evento_id, asiento_id, precio }) =>
 
   if (errorTicket) {
     await supabase
+<<<<<<< HEAD
+      .from('asientos')
+      .update({ estado: 'disponible' })
+      .eq('id', asiento_id);
+=======
       .from("asientos")
       .update({ estado: "disponible" })
       .eq("id", asiento_id);
 
+>>>>>>> d00a19473be0b09ce112ba12482d8d827880273a
     throw errorTicket;
   }
 
