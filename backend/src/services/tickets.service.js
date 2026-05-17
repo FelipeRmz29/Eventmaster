@@ -2,6 +2,7 @@ const supabase = require('./supabase');
 const { generarPDFTickets } = require('./pdf.service');
 const { acquireSeatLock, releaseSeatLock } = require('./redis');
 const { descifrarQR } = require('./crypto.service');
+const { enviarTicketPorCorreo } = require('./mail.service');
 
 const simularPago = async ({ total }) => {
   await new Promise(resolve => setTimeout(resolve, 600));
@@ -108,6 +109,14 @@ const confirmarCompra = async ({ nombre, email, evento_id, asientos }) => {
 
     // 6. Generar PDF con todos los tickets
     const pdfBuffer = await generarPDFTickets(ticketsCreados);
+
+    // 7. Enviar PDF por correo (no bloquea si falla)
+    enviarTicketPorCorreo({
+      email,
+      nombre,
+      pdfBuffer,
+      ticketIds: ticketsCreados.map(t => t.id),
+    }).catch(err => console.error('Error al enviar correo:', err.message));
 
     return { tickets: ticketsCreados, pdfBuffer, referenciaPago: pago.referencia };
   } finally {
