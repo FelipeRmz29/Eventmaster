@@ -125,7 +125,7 @@ function EventDetail() {
   if (error && !evento) return (
     <div className="page-container">
       <p style={{ color: 'var(--danger)', marginBottom: 16 }}>{error}</p>
-      <Link to="/eventos" className="main-button ghost">← Eventos</Link>
+      <Link to="/events" className="main-button ghost">← Eventos</Link>
     </div>
   );
 
@@ -151,7 +151,7 @@ function EventDetail() {
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button className="main-button ghost" onClick={handleShare}>Compartir</button>
-          <Link to="/eventos" className="main-button ghost">← Eventos</Link>
+          <Link to="/events" className="main-button ghost">← Eventos</Link>
         </div>
       </div>
 

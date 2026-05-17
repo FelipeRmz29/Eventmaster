@@ -24,7 +24,7 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/events" element={<PublicEvents />} />
-        <Route path="/events/:eventSlug" element={<EventDetail />} />
+        <Route path="/events/:id" element={<EventDetail />} />
         <Route path="/verificar" element={<TicketVerifier />} />
 
         <Route
