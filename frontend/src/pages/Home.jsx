@@ -59,7 +59,6 @@ function Home() {
         <SectionHeader
           eyebrow="Eventos"
           title="Disponibles"
-          description="Datos cargados desde el backend."
           actions={<ButtonLink to="/events" variant="ghost">Ver todos</ButtonLink>}
         />
 
