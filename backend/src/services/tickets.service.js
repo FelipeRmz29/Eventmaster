@@ -1,58 +1,52 @@
 const supabase = require('./supabase');
 const { generarPDFTicket } = require('./pdf.service');
 
-// Obtener ticket por ID
 const getTicketById = async (id) => {
   const { data, error } = await supabase
-    .from('tickets')
-    .select('*')
-    .eq('id', id)
+    .from("tickets")
+    .select("*")
+    .eq("id", id)
     .single();
 
   if (error) {
-    if (error.code === 'PGRST116') return null;
+    if (error.code === "PGRST116") return null;
     throw error;
   }
 
   return data;
 };
 
-// Confirmar compra y crear ticket
 const confirmarCompra = async ({ usuario_id, evento_id, asiento_id, precio }) => {
-
-  // 1. Verificar que el asiento sigue disponible
   const { data: asiento, error: errorAsiento } = await supabase
-    .from('asientos')
-    .select('estado')
-    .eq('id', asiento_id)
+    .from("asientos")
+    .select("estado")
+    .eq("id", asiento_id)
     .single();
 
   if (errorAsiento) throw errorAsiento;
 
-  if (asiento.estado !== 'disponible') {
-    const err = new Error('El asiento ya no está disponible');
-    err.tipo = 'ASIENTO_NO_DISPONIBLE';
-    throw err;
+  if (asiento.estado !== "disponible") {
+    const error = new Error("El asiento ya no esta disponible");
+    error.tipo = "ASIENTO_NO_DISPONIBLE";
+    throw error;
   }
 
-  // 2. Marcar el asiento como ocupado
   const { error: errorUpdate } = await supabase
-    .from('asientos')
-    .update({ estado: 'ocupado' })
-    .eq('id', asiento_id);
+    .from("asientos")
+    .update({ estado: "ocupado" })
+    .eq("id", asiento_id);
 
   if (errorUpdate) throw errorUpdate;
 
-  // 3. Crear el ticket
   const { data: ticket, error: errorTicket } = await supabase
-    .from('tickets')
+    .from("tickets")
     .insert({
       usuario_id,
       evento_id,
       asiento_id,
       precio,
-      estado: 'valido',
-      usado_en: null
+      estado: "valido",
+      usado_en: null,
     })
     .select(`
       *,
@@ -62,18 +56,59 @@ const confirmarCompra = async ({ usuario_id, evento_id, asiento_id, precio }) =>
     .single();
 
   if (errorTicket) {
-    // Revertir el asiento a disponible antes de lanzar el error
     await supabase
+<<<<<<< HEAD
       .from('asientos')
       .update({ estado: 'disponible' })
       .eq('id', asiento_id);
+=======
+      .from("asientos")
+      .update({ estado: "disponible" })
+      .eq("id", asiento_id);
+
+>>>>>>> d00a19473be0b09ce112ba12482d8d827880273a
     throw errorTicket;
   }
 
   return ticket;
 };
 
+const comprarTicket = async ({ usuario_id, evento_id, asiento_id, precio }) => {
+  const lockKey = `seat:${asiento_id}`;
+  let lock = true;
+
+  if (redisClient?.isOpen) {
+    lock = await redisClient.set(lockKey, "locked", {
+      NX: true,
+      EX: 10,
+    });
+  }
+
+  if (!lock) {
+    throw new Error("Asiento en proceso de compra");
+  }
+
+  try {
+    const ticket = await confirmarCompra({
+      usuario_id,
+      evento_id,
+      asiento_id,
+      precio,
+    });
+
+    return {
+      success: true,
+      ticket,
+    };
+  } finally {
+    if (redisClient?.isOpen) {
+      await redisClient.del(lockKey);
+    }
+  }
+};
+
 module.exports = {
   getTicketById,
-  confirmarCompra
-};  
+  confirmarCompra,
+  comprarTicket,
+};

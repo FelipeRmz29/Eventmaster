@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="EventMaster">
+  <rect width="512" height="512" rx="108" fill="#060b1a"/>
+  <path fill="#2563eb" d="M118 152c0-22 18-40 40-40h196c22 0 40 18 40 40v208c0 22-18 40-40 40H158c-22 0-40-18-40-40V152Z"/>
+  <path fill="#7c3aed" d="M150 176c0-17 14-31 31-31h150c17 0 31 14 31 31v160c0 17-14 31-31 31H181c-17 0-31-14-31-31V176Z"/>
+  <path fill="#f8fafc" d="M190 196h132v34H231v39h78v34h-78v13h96v34H190V196Z"/>
+  <path fill="#d946ef" d="M330 162h44v44h-44zM138 306h44v44h-44z"/>
+</svg>

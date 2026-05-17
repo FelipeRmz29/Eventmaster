@@ -1,6 +1,10 @@
 const WebSocket = require("ws");
 
-const wss = new WebSocket.Server({ port: 8080 });
+const MAX_MESSAGE_LENGTH = 2048;
+const wss = new WebSocket.Server({
+  host: "127.0.0.1",
+  port: 8080,
+});
 
 wss.on("connection", (ws) => {
   console.log("Client connected");
@@ -9,7 +13,12 @@ wss.on("connection", (ws) => {
 
   ws.on("message", (message) => {
     const text = message.toString();
-    console.log("Received:", text);
+
+    if (text.length > MAX_MESSAGE_LENGTH) {
+      ws.send("Message too large");
+      return;
+    }
+
     ws.send(`Server received: ${text}`);
   });
 
@@ -18,4 +27,4 @@ wss.on("connection", (ws) => {
   });
 });
 
-console.log("WebSocket server running on ws://localhost:8080");
+console.log("WebSocket server running on ws://127.0.0.1:8080");

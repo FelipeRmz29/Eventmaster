@@ -1,45 +1,81 @@
 import { Link } from "react-router-dom";
+import { Badge, ButtonLink, Card, SectionHeader, StatCard } from "../components/ui.jsx";
+import { events, formatCurrency } from "../data/events";
+import { loadMapFromLocalStorage } from "../data/storage";
 
 function AdminPanel() {
+  const map = loadMapFromLocalStorage();
+  const totalSeats = map ? map.length * (map[0]?.length || 0) : 80;
+  const occupiedSeats = map
+    ? map.flat().filter((seat) => seat.status === "occupied").length
+    : 18;
+  const estimatedRevenue = events.reduce((total, event) => total + event.priceFrom * 42, 0);
+
   return (
-    <div className="page-container">
-      <div className="brand-block">
-        <h1>
-          Panel <span className="brand-highlight">EventMaster</span>
-        </h1>
-        <p>Administra recintos, vistas y flujos internos con una interfaz central.</p>
+    <main className="page-container admin-page">
+      <div className="admin-shell">
+        <aside className="admin-sidebar">
+          <img src="/brand/logo-eventmaster-white.svg" alt="EventMaster" />
+          <nav>
+            <Link to="/admin" className="active">Overview</Link>
+            <Link to="/events">Eventos</Link>
+            <Link to="/admin/venues">Recintos</Link>
+            <Link to="/verificar">QR Check</Link>
+            <Link to="/websocket">Realtime</Link>
+          </nav>
+        </aside>
+
+        <section className="admin-content">
+          <SectionHeader
+            eyebrow="Admin"
+            title="Centro de control EventMaster"
+            description="Opera eventos, recintos, venta de boletos y acceso QR desde una vista ejecutiva."
+            actions={<ButtonLink to="/verificar">Verificar QR</ButtonLink>}
+          />
+
+          <div className="metrics-grid">
+            <StatCard label="Eventos activos" value={events.length} helper="+12% vs ayer" />
+            <StatCard label="Boletos vendidos" value="168" helper="Estimado demo" tone="success" />
+            <StatCard label="Ingresos estimados" value={formatCurrency(estimatedRevenue)} helper="Venta bruta demo" />
+            <StatCard label="Asientos ocupados" value={`${occupiedSeats}/${totalSeats}`} helper="Mapa actual" tone="warning" />
+          </div>
+
+          <div className="admin-layout">
+            <Card className="admin-table-card">
+              <div className="table-header">
+                <div>
+                  <h2>Eventos recientes</h2>
+                  <p>Listado operativo para administracion comercial.</p>
+                </div>
+                <ButtonLink to="/admin/create" size="sm">Crear evento</ButtonLink>
+              </div>
+
+              <div className="event-table">
+                {events.map((event) => (
+                  <Link key={event.id} to={`/events/${event.slug}`} className="event-row">
+                    <div>
+                      <strong>{event.title}</strong>
+                      <span>{event.venue} · {event.dateLabel}</span>
+                    </div>
+                    <Badge tone={event.availability === "Media" ? "warning" : "success"}>
+                      {event.status}
+                    </Badge>
+                    <span>{formatCurrency(event.priceFrom)}</span>
+                  </Link>
+                ))}
+              </div>
+            </Card>
+
+            <Card className="admin-actions-card">
+              <h2>Accesos rapidos</h2>
+              <ButtonLink to="/admin/create">Disenar recinto</ButtonLink>
+              <ButtonLink to="/admin/venues" variant="secondary">Ver recintos</ButtonLink>
+              <ButtonLink to="/websocket" variant="ghost">Probar realtime</ButtonLink>
+            </Card>
+          </div>
+        </section>
       </div>
-
-      <div className="section-card" style={{ marginTop: "24px" }}>
-        <h2 className="section-title">Herramientas administrativas</h2>
-        <p className="section-subtitle">
-          Selecciona una acción para continuar con la configuración del sistema.
-        </p>
-
-        <div className="admin-grid">
-          <Link to="/admin/venues" className="admin-option">
-            <h3>Ver recintos</h3>
-            <p>Consulta los recintos guardados y valida sus dimensiones.</p>
-          </Link>
-
-          <Link to="/admin/create" className="admin-option">
-            <h3>Crear recinto</h3>
-            <p>Diseña una nueva distribución visual de asientos.</p>
-          </Link>
-
-          <Link to="/websocket" className="admin-option">
-            <h3>Pruebas realtime</h3>
-            <p>Verifica que la comunicación en tiempo real funcione correctamente.</p>
-          </Link>
-        </div>
-
-        <div className="button-group">
-          <Link to="/" className="main-button ghost">
-            Volver al inicio
-          </Link>
-        </div>
-      </div>
-    </div>
+    </main>
   );
 }
 
