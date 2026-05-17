@@ -6,7 +6,7 @@ const { enviarTicketPorCorreo } = require('./mail.service');
 
 const simularPago = async ({ total }) => {
   await new Promise(resolve => setTimeout(resolve, 600));
-  const aprobado = Math.random() > 0.05; // 95% éxito para demo
+  const aprobado = Math.random() > 0.05; // demo: 95% éxito — en producción: llamada real a pasarela (Stripe, Conekta, etc.)
   const referencia = `PAY-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
   return { aprobado, referencia };
 };

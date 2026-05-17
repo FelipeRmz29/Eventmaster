@@ -1,8 +1,4 @@
-const getApiBaseUrl = () => {
-  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
-  const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
-  return `${protocol}//${window.location.hostname}:3000`;
-};
+const getApiBaseUrl = () => import.meta.env.VITE_API_URL ?? '';
 
 // Mapeo de respuesta del backend al formato que usa TicketVerifier
 const mapResultado = (data) => {
