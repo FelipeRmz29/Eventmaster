@@ -1,135 +1,223 @@
-import { useState } from "react";
-import { Link, useParams } from "react-router-dom";
-import { Badge, Button, ButtonLink, Card } from "../components/ui.jsx";
-import { formatCurrency, getEventBySlug } from "../data/events";
+import { useState, useEffect } from 'react';
+import { useParams, Link } from 'react-router-dom';
+import { getEventoPorId, getAsientosPorRecinto, confirmarCompra } from '../services/api';
+import SeatGrid from '../components/SeatGrid';
+
+const MAX_SEATS = 2;
+
+function buildGrid(seats, selectedIds, precioVip, precioGeneral) {
+  const selectedSet = new Set(selectedIds);
+  const rows = {};
+  seats.forEach((seat) => {
+    if (!rows[seat.fila]) rows[seat.fila] = [];
+    let status = 'available';
+    if (selectedSet.has(seat.id)) {
+      status = 'selected';
+    } else if (seat.estado !== 'disponible') {
+      status = 'occupied';
+    }
+    const precio = seat.zona === 'VIP' ? precioVip : precioGeneral;
+    rows[seat.fila].push({ id: seat.id, label: `${seat.fila}${seat.numero}`, status, zona: seat.zona, precio });
+  });
+  return Object.keys(rows)
+    .sort()
+    .map((row) => rows[row].sort((a, b) => parseInt(a.label.slice(1)) - parseInt(b.label.slice(1))));
+}
 
 function EventDetail() {
-  const { eventSlug } = useParams();
-  const event = getEventBySlug(eventSlug);
-  const [activeTab, setActiveTab] = useState("Info");
-  const [shareMessage, setShareMessage] = useState("");
+  const { id } = useParams();
+  const [evento, setEvento] = useState(null);
+  const [seats, setSeats] = useState([]);
+  const [selectedSeats, setSelectedSeats] = useState([]); // array de { id, label, zona, precio }
+  const [form, setForm] = useState({ nombre: '', email: '' });
+  const [loading, setLoading] = useState(true);
+  const [purchasing, setPurchasing] = useState(false);
+  const [purchaseStep, setPurchaseStep] = useState(''); // 'verificando' | 'pagando'
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null); // { ticketIds, referenciaPago }
 
-  const countdown = "Proximo evento";
-
-  const handleShare = async () => {
-    const shareData = {
-      title: event.title,
-      text: `${event.title} en ${event.venue}`,
-      url: window.location.href,
-    };
-
-    try {
-      if (navigator.share) {
-        await navigator.share(shareData);
-      } else {
-        await navigator.clipboard.writeText(window.location.href);
-        setShareMessage("Link copiado al portapapeles.");
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const ev = await getEventoPorId(id);
+        if (!ev) { setError('Evento no encontrado'); return; }
+        setEvento(ev);
+        const seatList = await getAsientosPorRecinto(ev.recinto_id);
+        setSeats(seatList);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
       }
-    } catch {
-      setShareMessage("No se pudo compartir el evento.");
+    };
+    load();
+  }, [id]);
+
+  const precioVip = evento?.recintos?.precio_vip ?? 300;
+  const precioGeneral = evento?.recintos?.precio_general ?? 150;
+
+  const handleSeatClick = (seat) => {
+    if (seat.status === 'occupied') return;
+    setSelectedSeats((prev) => {
+      const ya = prev.find((s) => s.id === seat.id);
+      if (ya) return prev.filter((s) => s.id !== seat.id);
+      if (prev.length >= MAX_SEATS) return prev; // límite 2
+      return [...prev, seat];
+    });
+  };
+
+  const handleComprar = async () => {
+    if (selectedSeats.length === 0 || !form.nombre.trim() || !form.email.trim()) return;
+    setPurchasing(true);
+    setError(null);
+    try {
+      setPurchaseStep('verificando');
+      await new Promise(r => setTimeout(r, 300));
+      setPurchaseStep('pagando');
+
+      const asientos = selectedSeats.map((s) => ({ asiento_id: s.id, precio: s.precio }));
+      const { blob, ticketIds, referenciaPago } = await confirmarCompra({
+        nombre: form.nombre,
+        email: form.email,
+        evento_id: Number(id),
+        asientos,
+      });
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `tickets-eventmaster.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      const compradosIds = new Set(selectedSeats.map((s) => s.id));
+      setSeats((prev) => prev.map((s) => compradosIds.has(s.id) ? { ...s, estado: 'ocupado' } : s));
+      setSelectedSeats([]);
+      setForm({ nombre: '', email: '' });
+      setSuccess({ ticketIds, referenciaPago });
+      setTimeout(() => setSuccess(null), 8000);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setPurchasing(false);
+      setPurchaseStep('');
     }
   };
 
-  const tabs = {
-    Info: event.description,
-    Recinto: `${event.venue}, ${event.city}. Acceso con boleto digital y QR desde celular.`,
-    Artistas: "Lineup y talento por confirmar para esta demo comercial.",
-    Restricciones: "Revisa edad minima, objetos permitidos y horarios antes de comprar.",
-  };
+  if (loading) return <div className="page-container"><p className="empty-state">Cargando evento...</p></div>;
+  if (error && !evento) return (
+    <div className="page-container">
+      <p style={{ color: 'var(--danger)', marginBottom: 16 }}>{error}</p>
+      <Link to="/eventos" className="main-button ghost">← Eventos</Link>
+    </div>
+  );
+
+  const grid = buildGrid(seats, selectedSeats.map((s) => s.id), precioVip, precioGeneral);
+  const fecha = evento?.fecha
+    ? new Date(evento.fecha).toLocaleString('es-MX', { dateStyle: 'full', timeStyle: 'short' })
+    : '';
+  const total = selectedSeats.reduce((sum, s) => sum + s.precio, 0);
+
+  const purchaseLabel = purchaseStep === 'verificando'
+    ? 'Verificando disponibilidad...'
+    : purchaseStep === 'pagando'
+    ? 'Procesando pago...'
+    : `Confirmar compra y descargar PDF${selectedSeats.length > 1 ? 's' : ''}`;
 
   return (
-    <main className="event-detail-page">
-      <nav className="page-container breadcrumb">
-        <Link to="/">Inicio</Link>
-        <span>/</span>
-        <Link to="/events">{event.category}</Link>
-        <span>/</span>
-        <strong>{event.title}</strong>
-      </nav>
+    <div className="page-container">
+      <div className="brand-bar">
+        <div className="brand-block">
+          <h1>{evento?.nombre}</h1>
+          <p>{fecha} · {evento?.recintos?.nombre}</p>
+          <p style={{ color: 'var(--text-soft)', fontSize: '0.9rem' }}>{evento?.recintos?.direccion}</p>
+        </div>
+        <Link to="/eventos" className="main-button ghost">← Eventos</Link>
+      </div>
 
-      <section className="event-hero-detail" style={{ backgroundImage: `url(${event.image})` }}>
-        <div className="event-hero-overlay">
-          <div className="page-container detail-hero-content">
-            <Badge tone="success">{event.status}</Badge>
-            <h1>{event.title}</h1>
-            <p>{event.description}</p>
-            <div className="detail-hero-meta">
-              <span>{event.dateLabel} · {event.timeLabel}</span>
-              <span>{event.venue} · {event.city}</span>
-              <span>Comienza en {countdown}</span>
+      <div className="section-card" style={{ marginBottom: 20 }}>
+        <h2 className="section-title">Selecciona tu asiento</h2>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+          <span style={{ background: '#16a34a', color: 'white', padding: '4px 12px', borderRadius: 999, fontSize: '0.82rem' }}>● General disponible</span>
+          <span style={{ background: '#7c3aed', color: 'white', padding: '4px 12px', borderRadius: 999, fontSize: '0.82rem' }}>★ VIP disponible</span>
+          <span style={{ background: '#eab308', color: '#111', padding: '4px 12px', borderRadius: 999, fontSize: '0.82rem' }}>Seleccionado</span>
+          <span style={{ background: '#ef4444', color: 'white', padding: '4px 12px', borderRadius: 999, fontSize: '0.82rem' }}>Ocupado</span>
+          <span style={{ background: 'rgba(255,255,255,0.07)', color: '#94a3b8', padding: '4px 12px', borderRadius: 999, fontSize: '0.82rem', border: '1px solid rgba(148,163,184,0.2)' }}>
+            General ${precioGeneral} · VIP ${precioVip}
+          </span>
+          <span style={{ background: 'rgba(255,255,255,0.07)', color: '#94a3b8', padding: '4px 12px', borderRadius: 999, fontSize: '0.82rem', border: '1px solid rgba(148,163,184,0.2)' }}>
+            {selectedSeats.length}/{MAX_SEATS} seleccionados
+          </span>
+        </div>
+        <div className="venue-layout">
+          <div className="stage-banner">ESCENARIO</div>
+          {seats.length === 0
+            ? <p className="empty-state">Este recinto no tiene asientos configurados.</p>
+            : <SeatGrid grid={grid} onSeatClick={handleSeatClick} />
+          }
+        </div>
+      </div>
+
+      {selectedSeats.length > 0 && (
+        <div className="form-card">
+          <h2 className="section-title" style={{ marginBottom: 4 }}>
+            {selectedSeats.length === 1 ? 'Asiento seleccionado' : 'Asientos seleccionados'}
+          </h2>
+          <div style={{ display: 'flex', gap: 10, marginBottom: 18, flexWrap: 'wrap' }}>
+            {selectedSeats.map((s) => (
+              <span key={s.id} style={{ background: 'rgba(234,179,8,0.15)', border: '1px solid rgba(234,179,8,0.4)', color: '#fbbf24', padding: '6px 14px', borderRadius: 999, fontSize: '0.9rem', fontWeight: 700 }}>
+                {s.label} · {s.zona} · ${s.precio}
+              </span>
+            ))}
+            {selectedSeats.length > 1 && (
+              <span style={{ color: 'var(--text-soft)', padding: '6px 0', fontSize: '0.9rem' }}>
+                Total: <strong style={{ color: 'var(--text-main)' }}>${total}</strong>
+              </span>
+            )}
+          </div>
+
+          <div className="form-row">
+            <div className="form-group">
+              <label>Nombre completo</label>
+              <input type="text" placeholder="Juan Pérez" value={form.nombre} onChange={(e) => setForm((f) => ({ ...f, nombre: e.target.value }))} />
+            </div>
+            <div className="form-group">
+              <label>Correo electrónico</label>
+              <input type="email" placeholder="juan@universidad.edu" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
             </div>
           </div>
+
+          {error && <p style={{ color: 'var(--danger)', marginBottom: 12 }}>{error}</p>}
+
+          <div className="button-group">
+            <button
+              className="main-button"
+              onClick={handleComprar}
+              disabled={purchasing || !form.nombre.trim() || !form.email.trim()}
+              style={(purchasing || !form.nombre.trim() || !form.email.trim()) ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
+            >
+              {purchaseLabel}
+            </button>
+            <button className="main-button ghost" onClick={() => setSelectedSeats([])} disabled={purchasing}>
+              Cancelar
+            </button>
+          </div>
         </div>
-      </section>
+      )}
 
-      <section className="page-container detail-layout">
-        <div className="detail-main">
-          <Card>
-            <h2>Informacion del evento</h2>
-            <div className="detail-facts">
-              <div>
-                <span>Fecha</span>
-                <strong>{event.dateLabel}</strong>
-              </div>
-              <div>
-                <span>Hora</span>
-                <strong>{event.timeLabel}</strong>
-              </div>
-              <div>
-                <span>Recinto</span>
-                <strong>{event.venue}</strong>
-              </div>
-              <div>
-                <span>Ciudad</span>
-                <strong>{event.city}</strong>
-              </div>
-            </div>
-          </Card>
-
-          <Card>
-            <div className="detail-tabs">
-              {Object.keys(tabs).map((tab) => (
-                <button
-                  key={tab}
-                  type="button"
-                  className={activeTab === tab ? "active" : ""}
-                  onClick={() => setActiveTab(tab)}
-                >
-                  {tab}
-                </button>
-              ))}
-            </div>
-            <p className="detail-copy">{tabs[activeTab]}</p>
-          </Card>
-
-          <Card className="venue-map-card">
-            <h2>Recinto</h2>
-            <div className="venue-map-preview">
-              <span>ESCENARIO</span>
-              <div />
-            </div>
-          </Card>
+      {success && (
+        <div style={{ marginTop: 20, background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.4)', borderRadius: 16, padding: '18px 22px', color: 'var(--success)', fontWeight: 600 }}>
+          ¡Compra exitosa! Tu PDF fue descargado automáticamente.
+          {success.referenciaPago && (
+            <span style={{ display: 'block', marginTop: 6, fontSize: '0.88rem', fontWeight: 400, color: 'var(--text-soft)' }}>
+              Referencia de pago: {success.referenciaPago}
+            </span>
+          )}
         </div>
-
-        <aside className="detail-aside">
-          <Card className="purchase-panel">
-            <span>Boletos desde</span>
-            <strong>{formatCurrency(event.priceFrom)}</strong>
-            <p>Disponibilidad actual: {event.availability}</p>
-            <ButtonLink to={`/buy?event=${event.slug}`}>Seleccionar asientos</ButtonLink>
-            <Button variant="ghost" onClick={handleShare}>Compartir evento</Button>
-            {shareMessage && <small>{shareMessage}</small>}
-          </Card>
-        </aside>
-      </section>
-
-      <div className="mobile-buy-bar">
-        <strong>{formatCurrency(event.priceFrom)}</strong>
-        <ButtonLink to={`/buy?event=${event.slug}`} size="sm">
-          Comprar
-        </ButtonLink>
-      </div>
-    </main>
+      )}
+    </div>
   );
 }
 
