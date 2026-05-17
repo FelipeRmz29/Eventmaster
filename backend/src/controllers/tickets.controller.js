@@ -19,7 +19,7 @@ const getTicketById = async (req, res) => {
 const confirmarCompra = async (req, res) => {
   try {
     const { usuario_id, evento_id, asiento_id, precio } = req.body;
-    if (!usuario_id || !evento_id || !asiento_id || !precio) {
+    if (!usuario_id || !evento_id || !asiento_id || precio === undefined || precio === null) {
       return res.status(400).json({
         error: 'Faltan datos. Se requiere: usuario_id, evento_id, asiento_id, precio'
       });

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Badge, Button, Card, Input } from "../components/ui.jsx";
+import { loginAdmin } from "../services/api";
 
 function Login() {
   const [email, setEmail] = useState("");
@@ -9,27 +10,23 @@ function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleLogin = (event) => {
+  const handleLogin = async (event) => {
     event.preventDefault();
     setError("");
     setIsLoading(true);
 
-    if (password === "admin123") {
+    try {
+      const data = await loginAdmin({ email: email.trim(), password });
+
+      localStorage.setItem("adminToken", data.token);
       localStorage.setItem("auth", "true");
       localStorage.setItem("role", "admin");
       navigate("/admin");
-      return;
+    } catch (loginError) {
+      setError(loginError.message || "Credenciales incorrectas.");
+    } finally {
+      setIsLoading(false);
     }
-
-    if (password === "cliente123") {
-      localStorage.setItem("auth", "true");
-      localStorage.setItem("role", "customer");
-      navigate("/events");
-      return;
-    }
-
-    setIsLoading(false);
-    setError("Credenciales incorrectas. Revisa el perfil de acceso.");
   };
 
   return (
@@ -37,39 +34,36 @@ function Login() {
       <img className="auth-background" src="/hero/eventmaster-hero.jpg" alt="" aria-hidden="true" />
       <Card className="auth-card premium-auth glass">
         <img className="auth-logo" src="/brand/logo-eventmaster-white.svg" alt="EventMaster" />
-        <Badge tone="info">Acceso seguro</Badge>
+        <Badge tone="info">Acceso administrador</Badge>
         <h1>Iniciar sesion</h1>
-        <p>Accede como administrador o comprador para continuar con la demo.</p>
+        <p>Ingresa con las credenciales de administrador registradas en backend.</p>
 
         <form onSubmit={handleLogin} className="auth-form">
           <Input
             label="Email"
             type="email"
             value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            placeholder="equipo@eventmaster.mx"
+            onChange={(eventInput) => setEmail(eventInput.target.value)}
+            placeholder="admin@eventmaster.mx"
+            required
           />
           <Input
             label="Password"
             type="password"
             value={password}
-            onChange={(event) => setPassword(event.target.value)}
+            onChange={(eventInput) => setPassword(eventInput.target.value)}
             placeholder="Escribe tu password"
             error={error}
+            required
           />
 
-          <Button loading={isLoading} disabled={isLoading || !password}>
+          <Button loading={isLoading} disabled={isLoading || !email || !password}>
             Entrar
           </Button>
         </form>
 
-        <div className="auth-help-grid">
-          <span>Admin: <strong>admin123</strong></span>
-          <span>Cliente: <strong>cliente123</strong></span>
-        </div>
-
         <p className="auth-footer">
-          No tienes cuenta demo? <Link to="/events">Explora eventos publicos</Link>
+          Acceso publico: <Link to="/events">Explora eventos</Link>
         </p>
       </Card>
     </main>
