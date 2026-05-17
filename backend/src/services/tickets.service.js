@@ -1,4 +1,5 @@
 const supabase = require('./supabase');
+const { generarPDFTicket } = require('./pdf.service');
 
 // Obtener ticket por ID
 const getTicketById = async (id) => {
@@ -66,7 +67,6 @@ const confirmarCompra = async ({ usuario_id, evento_id, asiento_id, precio }) =>
       .from('asientos')
       .update({ estado: 'disponible' })
       .eq('id', asiento_id);
-
     throw errorTicket;
   }
 
