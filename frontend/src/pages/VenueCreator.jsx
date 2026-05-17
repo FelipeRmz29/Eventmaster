@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import SeatGrid, { SeatLegend, SeatStats } from "../components/SeatGrid";
 import { Button, ButtonLink, Card, Input, SectionHeader } from "../components/ui.jsx";
-import { createRecinto } from "../services/api";
+import { crearRecinto as createRecinto } from "../services/api";
 
 const buildPreviewGrid = (rows, cols) =>
   Array.from({ length: rows }, (_, rowIndex) =>

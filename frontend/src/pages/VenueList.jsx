@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Button, ButtonLink, Card, EmptyState, SectionHeader, StatCard } from "../components/ui.jsx";
-import { deleteRecinto, getRecintos } from "../services/api";
+import { eliminarRecinto as deleteRecinto, getRecintos } from "../services/api";
 
 function VenueList() {
   const [venues, setVenues] = useState([]);
