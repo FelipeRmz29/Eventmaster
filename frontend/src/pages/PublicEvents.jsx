@@ -1,51 +1,47 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import EventCard from "../components/EventCard";
-import { Badge, Button, ButtonLink, Card, SectionHeader } from "../components/ui.jsx";
-import { events } from "../data/events";
-
-const categories = ["Todos", "Concierto", "Deportes", "Festival", "Conferencia"];
-const cities = ["Todas", "Ciudad de Mexico", "Monterrey", "Guadalajara", "Puebla"];
+import { Badge, ButtonLink, EmptyState, SectionHeader } from "../components/ui.jsx";
+import { normalizeEvents } from "../data/events";
+import { getEventos } from "../services/api";
 
 function PublicEvents() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [viewMode, setViewMode] = useState("grid");
+  const [events, setEvents] = useState([]);
+  const [status, setStatus] = useState("loading");
+  const [error, setError] = useState("");
   const query = searchParams.get("q") || "";
-  const category = searchParams.get("categoria") || "Todos";
-  const city = searchParams.get("ciudad") || "Todas";
-  const sort = searchParams.get("orden") || "fecha";
+
+  useEffect(() => {
+    getEventos()
+      .then((data) => {
+        setEvents(normalizeEvents(data));
+        setStatus("ready");
+      })
+      .catch((requestError) => {
+        setError(requestError.message);
+        setStatus("error");
+      });
+  }, []);
 
   const filteredEvents = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
 
-    return events
-      .filter((event) => {
-        const matchesQuery =
-          !normalizedQuery ||
-          `${event.title} ${event.venue} ${event.city} ${event.category}`
-            .toLowerCase()
-            .includes(normalizedQuery);
-        const matchesCategory = category === "Todos" || event.category === category;
-        const matchesCity = city === "Todas" || event.city === city;
+    if (!normalizedQuery) return events;
 
-        return matchesQuery && matchesCategory && matchesCity;
-      })
-      .sort((a, b) => {
-        if (sort === "precio") return a.priceFrom - b.priceFrom;
-        if (sort === "popularidad") return b.priceFrom - a.priceFrom;
+    return events.filter((event) =>
+      `${event.title} ${event.venue} ${event.city}`.toLowerCase().includes(normalizedQuery)
+    );
+  }, [events, query]);
 
-        return a.dateLabel.localeCompare(b.dateLabel);
-      });
-  }, [category, city, query, sort]);
-
-  const updateParam = (key, value) => {
+  const handleSearch = (event) => {
+    const nextQuery = event.target.value;
     const nextParams = new URLSearchParams(searchParams);
 
-    if (!value || value === "Todos" || value === "Todas") {
-      nextParams.delete(key);
+    if (nextQuery.trim()) {
+      nextParams.set("q", nextQuery);
     } else {
-      nextParams.set(key, value);
+      nextParams.delete("q");
     }
 
     setSearchParams(nextParams);
@@ -55,8 +51,8 @@ function PublicEvents() {
     <main className="page-container events-page">
       <SectionHeader
         eyebrow="Eventos"
-        title="Experiencias listas para reservar"
-        description="Explora eventos con boletos digitales, seleccion de asientos y acceso por QR."
+        title="Eventos disponibles"
+        description="Listado conectado al backend."
         actions={
           <ButtonLink to="/verificar" variant="ghost">
             Verificar boleto
@@ -64,89 +60,36 @@ function PublicEvents() {
         }
       />
 
-      <div className="mobile-filter-bar">
-        <Button variant="secondary" onClick={() => setIsFilterOpen(true)}>
-          Filtros
-        </Button>
-        <span>{filteredEvents.length} encontrados</span>
-      </div>
-
-      <div className="events-layout">
-        <Card className={`filters-panel ${isFilterOpen ? "open" : ""}`}>
-          <div className="filters-header">
-            <strong>Filtros</strong>
-            <button type="button" onClick={() => setIsFilterOpen(false)}>x</button>
+      <section className="events-results">
+        <div className="results-toolbar">
+          <div>
+            <Badge tone="info">{filteredEvents.length} eventos</Badge>
+            {query && <p>Busqueda: {query}</p>}
           </div>
-
-          <label className="ui-field">
+          <label className="ui-field event-search-field">
             <span>Buscar</span>
             <input
               value={query}
-              onChange={(event) => updateParam("q", event.target.value)}
-              placeholder="Evento, recinto o ciudad"
+              onChange={handleSearch}
+              placeholder="Nombre o recinto"
             />
           </label>
+        </div>
 
-          <div className="filter-group">
-            <span>Categoria</span>
-            {categories.map((item) => (
-              <button
-                key={item}
-                type="button"
-                className={category === item ? "active" : ""}
-                onClick={() => updateParam("categoria", item)}
-              >
-                {item}
-              </button>
-            ))}
-          </div>
+        {status === "loading" && <p className="loading-state">Cargando eventos...</p>}
+        {status === "error" && (
+          <EmptyState title="No se pudieron cargar los eventos." description={error} />
+        )}
+        {status === "ready" && !filteredEvents.length && (
+          <EmptyState title="No hay eventos disponibles." description="Intenta otra busqueda." />
+        )}
 
-          <label className="ui-field">
-            <span>Ciudad</span>
-            <select value={city} onChange={(event) => updateParam("ciudad", event.target.value)}>
-              {cities.map((item) => (
-                <option key={item} value={item}>{item}</option>
-              ))}
-            </select>
-          </label>
-        </Card>
-
-        <section className="events-results">
-          <div className="results-toolbar">
-            <div>
-              <Badge tone="info">{filteredEvents.length} eventos encontrados</Badge>
-              {query && <p>Busqueda: {query}</p>}
-            </div>
-            <div className="toolbar-actions">
-              <select value={sort} onChange={(event) => updateParam("orden", event.target.value)}>
-                <option value="fecha">Fecha</option>
-                <option value="precio">Precio</option>
-                <option value="popularidad">Popularidad</option>
-              </select>
-              <button
-                type="button"
-                className={viewMode === "grid" ? "active" : ""}
-                onClick={() => setViewMode("grid")}
-              >
-                Grid
-              </button>
-              <button
-                type="button"
-                className={viewMode === "list" ? "active" : ""}
-                onClick={() => setViewMode("list")}
-              >
-                Lista
-              </button>
-            </div>
-          </div>
-
-          <div className={`events-grid ${viewMode === "list" ? "list-mode" : ""}`}>
-            {filteredEvents.map((event) => (
-              <EventCard key={event.id} event={event} />
-            ))}
-          </div>
-        </section>
-      </div>
+        <div className="events-grid">
+          {filteredEvents.map((event) => (
+            <EventCard key={event.id} event={event} />
+          ))}
+        </div>
+      </section>
     </main>
   );
 }

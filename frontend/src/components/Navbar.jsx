@@ -8,7 +8,7 @@ function Navbar() {
   const [query, setQuery] = useState("");
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const isAuthenticated = localStorage.getItem("auth") === "true";
+  const isAuthenticated = Boolean(localStorage.getItem("adminToken"));
   const role = localStorage.getItem("role");
 
   useEffect(() => {
@@ -23,6 +23,7 @@ function Navbar() {
   const handleLogout = () => {
     localStorage.removeItem("auth");
     localStorage.removeItem("role");
+    localStorage.removeItem("adminToken");
     setIsMenuOpen(false);
     navigate("/login");
   };
@@ -45,7 +46,6 @@ function Navbar() {
           { to: "/websocket", label: "Realtime" },
         ]
       : []),
-    ...(role === "customer" ? [{ to: "/buy", label: "Mis boletos" }] : []),
   ];
 
   const renderLinks = (className = "navbar-links") => (

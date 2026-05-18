@@ -1,166 +1,132 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import SeatGrid, { SeatLegend, SeatStats } from "../components/SeatGrid";
 import { Button, ButtonLink, Card, Input, SectionHeader } from "../components/ui.jsx";
-import { loadMapFromLocalStorage, saveMapToLocalStorage } from "../data/storage";
-import { connectSocket, getClientId, sendSocketMessage } from "../services/socket";
-import {
-  EDITABLE_SEAT_STATUSES,
-  applySeatUpdates,
-  cleanSeatLayoutForStorage,
-  createSocketSeat,
-} from "../data/seats";
+import { crearRecinto as createRecinto } from "../services/api";
+
+const buildPreviewGrid = (rows, cols) =>
+  Array.from({ length: rows }, (_, rowIndex) =>
+    Array.from({ length: cols }, (_, colIndex) => ({
+      id: `${rowIndex}-${colIndex}`,
+      label: `${String.fromCharCode(65 + rowIndex)}${colIndex + 1}`,
+      status: "available",
+    }))
+  );
 
 function VenueCreator() {
-  const savedGrid = useMemo(() => loadMapFromLocalStorage(), []);
-  const [clientId] = useState(() => getClientId());
-  const [rows, setRows] = useState(savedGrid?.length || 6);
-  const [cols, setCols] = useState(savedGrid?.[0]?.length || 8);
-  const [grid, setGrid] = useState(() => savedGrid || []);
-  const [paintStatus, setPaintStatus] = useState("available");
-  const [saveStatus, setSaveStatus] = useState("");
-  const activeStatusLabel =
-    EDITABLE_SEAT_STATUSES.find((status) => status.value === paintStatus)?.label || "Disponible";
+  const [form, setForm] = useState({
+    nombre: "",
+    direccion: "",
+    filas: 6,
+    columnas: 8,
+    filasVIP: 0,
+  });
+  const [status, setStatus] = useState("");
+  const [error, setError] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const grid = useMemo(
+    () => buildPreviewGrid(Number(form.filas || 0), Number(form.columnas || 0)),
+    [form.columnas, form.filas]
+  );
 
-  useEffect(() => {
-    const socket = connectSocket();
+  const updateField = (field, value) => {
+    setForm((current) => ({ ...current, [field]: value }));
+    setStatus("");
+    setError("");
+  };
 
-    const handleSocketMessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
+  const handleSave = async () => {
+    setIsSaving(true);
+    setStatus("");
+    setError("");
 
-        if (data.type === "seat_update") {
-          setGrid((prevGrid) => applySeatUpdates(prevGrid, [data.seat]));
-        }
+    try {
+      const recinto = await createRecinto({
+        nombre: form.nombre.trim(),
+        direccion: form.direccion.trim(),
+        filas: Number(form.filas),
+        columnas: Number(form.columnas),
+        filasVIP: Number(form.filasVIP || 0),
+      });
 
-        if (data.type === "seat_snapshot" && Array.isArray(data.seats)) {
-          setGrid((prevGrid) => applySeatUpdates(prevGrid, data.seats));
-        }
-      } catch (error) {
-        console.error("Mensaje WebSocket no valido:", error);
-      }
-    };
-
-    socket.addEventListener("message", handleSocketMessage);
-
-    return () => {
-      socket.removeEventListener("message", handleSocketMessage);
-    };
-  }, []);
-
-  const generateGrid = () => {
-    const newGrid = [];
-
-    for (let i = 0; i < rows; i += 1) {
-      const row = [];
-
-      for (let j = 0; j < cols; j += 1) {
-        row.push({
-          id: `${i}-${j}`,
-          label: `${String.fromCharCode(65 + i)}${j + 1}`,
-          status: "available",
-        });
-      }
-
-      newGrid.push(row);
+      setStatus(`Recinto creado: ${recinto.nombre}`);
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setIsSaving(false);
     }
-
-    setGrid(newGrid);
-    setSaveStatus("");
-  };
-
-  const handleSave = () => {
-    const cleanGrid = cleanSeatLayoutForStorage(grid);
-
-    saveMapToLocalStorage(cleanGrid);
-    setGrid(cleanGrid);
-    setSaveStatus("Configuracion del recinto guardada correctamente.");
-  };
-
-  const handleSeatClick = (clickedSeat) => {
-    const nextStatus =
-      clickedSeat.status === paintStatus && paintStatus !== "available"
-        ? "available"
-        : paintStatus;
-    const updatedSeat = {
-      ...clickedSeat,
-      status: nextStatus,
-      lockedBy: undefined,
-    };
-
-    setGrid((prevGrid) => applySeatUpdates(prevGrid, [updatedSeat]));
-    sendSocketMessage({ type: "seat_update", seat: createSocketSeat(updatedSeat) });
-    setSaveStatus("");
   };
 
   return (
     <main className="page-container admin-page">
       <SectionHeader
         eyebrow="Recintos"
-        title="Disenador de asientos"
-        description="Define filas, columnas y disponibilidad visual para la experiencia de compra."
+        title="Crear recinto"
+        description="Crea el recinto y genera sus asientos en backend."
         actions={<ButtonLink to="/admin/venues" variant="ghost">Ver recintos</ButtonLink>}
       />
 
       <div className="creator-layout">
         <Card className="creator-controls">
           <h2>Configuracion</h2>
+          <Input
+            label="Nombre"
+            value={form.nombre}
+            onChange={(event) => updateField("nombre", event.target.value)}
+            placeholder="Auditorio principal"
+          />
+          <Input
+            label="Direccion"
+            value={form.direccion}
+            onChange={(event) => updateField("direccion", event.target.value)}
+            placeholder="Direccion del recinto"
+          />
           <div className="form-row">
             <Input
               label="Filas"
               type="number"
               min="1"
               max="26"
-              value={rows}
-              onChange={(event) => setRows(Number(event.target.value))}
+              value={form.filas}
+              onChange={(event) => updateField("filas", event.target.value)}
             />
             <Input
               label="Columnas"
               type="number"
               min="1"
               max="24"
-              value={cols}
-              onChange={(event) => setCols(Number(event.target.value))}
+              value={form.columnas}
+              onChange={(event) => updateField("columnas", event.target.value)}
             />
           </div>
-
-          <div className="seat-toolbox" role="group" aria-label="Estado para pintar butacas">
-            {EDITABLE_SEAT_STATUSES.map((status) => (
-              <button
-                key={status.value}
-                type="button"
-                className={`seat-tool seat-tool-${status.value} ${
-                  paintStatus === status.value ? "active" : ""
-                }`}
-                onClick={() => setPaintStatus(status.value)}
-              >
-                <span className="seat-tool-swatch" aria-hidden="true" />
-                <strong>{status.label}</strong>
-                <small>{status.helper}</small>
-              </button>
-            ))}
-          </div>
+          <Input
+            label="Filas VIP"
+            type="number"
+            min="0"
+            max={form.filas}
+            value={form.filasVIP}
+            onChange={(event) => updateField("filasVIP", event.target.value)}
+          />
 
           <div className="button-group">
-            <Button onClick={generateGrid}>Generar mapa</Button>
-            <Button onClick={handleSave} variant="secondary" disabled={!grid.length}>
-              Guardar configuracion
+            <Button
+              onClick={handleSave}
+              loading={isSaving}
+              disabled={isSaving || !form.nombre || !form.direccion}
+            >
+              Guardar recinto
             </Button>
           </div>
-          {saveStatus && <p className="success-note">{saveStatus}</p>}
+          {status && <p className="success-note">{status}</p>}
+          {error && <p className="form-note">{error}</p>}
         </Card>
 
         <Card className="seat-map-card enhanced-seat-map-card">
           <div className="seat-map-topbar">
-            <span className="seat-editor-mode">Pintando: {activeStatusLabel}</span>
+            <span className="seat-editor-mode">Vista previa</span>
             <SeatStats grid={grid} />
           </div>
           <div className="stage-banner">ESCENARIO</div>
-          <SeatGrid
-            grid={grid}
-            onSeatClick={handleSeatClick}
-            clientId={clientId}
-            editable
-          />
+          <SeatGrid grid={grid} editable />
           <SeatLegend />
         </Card>
       </div>

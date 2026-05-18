@@ -1,11 +1,15 @@
-const express = require("express");
-const ticketsController = require("../controllers/tickets.controller");
+const express = require('express');
 const router = express.Router();
+const ticketsController = require('../controllers/tickets.controller');
+const verifyToken = require('../middleware/authMiddleware');
 
-router.get("/:id", ticketsController.getTicketById);
-router.post("/confirmar", ticketsController.confirmarCompra);
-router.post("/compra", ticketsController.comprarTicket);
-router.post("/qr", ticketsController.generarQR);
-router.post("/validar", ticketsController.validarQR);
+// POST /tickets/confirmar → confirmar compra y generar PDF
+router.post('/confirmar', ticketsController.confirmarCompra);
+
+// POST /tickets/validar → validar QR en entrada (requiere token de admin)
+router.post('/validar', verifyToken, ticketsController.validarTicket);
+
+// GET /tickets/:id → obtener ticket por ID
+router.get('/:id', ticketsController.getTicketById);
 
 module.exports = router;
