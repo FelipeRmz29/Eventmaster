@@ -29,8 +29,7 @@ function AdminPanel() {
             <Link to="/admin" className="active">Overview</Link>
             <Link to="/admin/eventos">Eventos</Link>
             <Link to="/admin/venues">Recintos</Link>
-            <Link to="/verificar">QR Check</Link>
-            <Link to="/websocket">Realtime</Link>
+            <Link to="/verificar">Verificar QR</Link>
           </nav>
         </aside>
 
@@ -38,7 +37,7 @@ function AdminPanel() {
           <SectionHeader
             eyebrow="Admin"
             title="Centro de control EventMaster"
-            description="Opera eventos, recintos y accesos desde datos conectados al backend."
+            description="Opera eventos, recintos y accesos."
             actions={<ButtonLink to="/verificar">Verificar QR</ButtonLink>}
           />
 
@@ -74,7 +73,6 @@ function AdminPanel() {
               <p>{venues.length} recintos registrados.</p>
               <ButtonLink to="/admin/create">Crear recinto</ButtonLink>
               <ButtonLink to="/admin/venues" variant="secondary">Ver recintos</ButtonLink>
-              <ButtonLink to="/websocket" variant="ghost">Probar realtime</ButtonLink>
             </Card>
           </div>
         </section>
