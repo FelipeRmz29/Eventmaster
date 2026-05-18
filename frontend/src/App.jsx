@@ -12,7 +12,6 @@ import PublicEvents from "./pages/PublicEvents";
 import EventDetail from "./pages/EventDetail";
 import TicketVerifier from "./pages/TicketVerifier";
 import PWAInstallBanner from "./components/PWAInstallBanner";
-import QRScanner from "./components/QRScanner";
 
 function App() {
   return (
