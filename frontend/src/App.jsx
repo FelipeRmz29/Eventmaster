@@ -14,13 +14,13 @@ import CheckoutTicket from "./pages/CheckoutTicket";
 import TicketVerifier from "./pages/TicketVerifier";
 import WebSocketPanel from "./components/websocketpanel";
 import PWAInstallBanner from "./components/PWAInstallBanner";
+import QRScanner from "./components/QRScanner";
 
 function App() {
   return (
     <BrowserRouter>
       <Navbar />
       <PWAInstallBanner />
-
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
@@ -28,51 +28,12 @@ function App() {
         <Route path="/events/:eventSlug" element={<EventDetail />} />
         <Route path="/verificar" element={<TicketVerifier />} />
         <Route path="/checkout/:eventSlug" element={<CheckoutTicket />} />
-
-        <Route
-          path="/admin"
-          element={
-            <ProtectedRoute allowedRole="admin">
-              <AdminPanel />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/admin/create"
-          element={
-            <ProtectedRoute allowedRole="admin">
-              <VenueCreator />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/admin/venues"
-          element={
-            <ProtectedRoute allowedRole="admin">
-              <VenueList />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/websocket"
-          element={
-            <ProtectedRoute allowedRole="admin">
-              <WebSocketPanel />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/buy"
-          element={
-            <ProtectedRoute allowedRole="customer">
-              <BuyerView />
-            </ProtectedRoute>
-          }
-        />
+        <Route path="/admin" element={<ProtectedRoute allowedRole="admin"><AdminPanel /></ProtectedRoute>} />
+        <Route path="/admin/create" element={<ProtectedRoute allowedRole="admin"><VenueCreator /></ProtectedRoute>} />
+        <Route path="/admin/venues" element={<ProtectedRoute allowedRole="admin"><VenueList /></ProtectedRoute>} />
+        <Route path="/websocket" element={<ProtectedRoute allowedRole="admin"><WebSocketPanel /></ProtectedRoute>} />
+        <Route path="/buy" element={<ProtectedRoute allowedRole="customer"><BuyerView /></ProtectedRoute>} />
+        <Route path="/scanner" element={<ProtectedRoute allowedRole="admin"><QRScanner /></ProtectedRoute>} />
       </Routes>
     </BrowserRouter>
   );

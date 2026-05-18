@@ -67,12 +67,29 @@ const generarQR = async (req, res) => {
       return res.status(400).json({ error: 'Faltan datos del ticket' });
     }
 
-    const { uuid, qrDataUrl } = await generateTicketQR({ ticket_id, evento, asiento, usuario });
+    const { uuid, qrDataUrl, encrypted } = await generateTicketQR({ ticket_id, evento, asiento, usuario });
 
-    return res.status(200).json({ message: 'QR generado correctamente', uuid, qr: qrDataUrl });
+    return res.status(200).json({ message: 'QR generado correctamente', uuid, qr: qrDataUrl, encrypted });
   } catch (error) {
     console.error('Error generando QR:', error.message);
     return res.status(500).json({ error: 'Error al generar el QR' });
+  }
+};
+
+const validarQR = async (req, res) => {
+  try {
+    const { qr } = req.body;
+
+    if (!qr) {
+      return res.status(400).json({ error: 'El campo qr es requerido' });
+    }
+
+    const resultado = await ticketsService.validarQR(qr);
+    return res.status(200).json(resultado);
+
+  } catch (error) {
+    console.error('Error al validar QR:', error.message);
+    return res.status(500).json({ error: 'Error interno del servidor' });
   }
 };
 
@@ -81,4 +98,6 @@ module.exports = {
   confirmarCompra,
   comprarTicket,
   generarQR,
+  validarQR
 };
+
