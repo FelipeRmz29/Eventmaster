@@ -12,13 +12,13 @@ import PublicEvents from "./pages/PublicEvents";
 import EventDetail from "./pages/EventDetail";
 import TicketVerifier from "./pages/TicketVerifier";
 import PWAInstallBanner from "./components/PWAInstallBanner";
+import QRScanner from "./components/QRScanner";
 
 function App() {
   return (
     <BrowserRouter>
       <Navbar />
       <PWAInstallBanner />
-
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />

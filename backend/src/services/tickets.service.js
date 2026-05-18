@@ -17,12 +17,10 @@ const getTicketById = async (id) => {
     .select('*')
     .eq('id', id)
     .single();
-
   if (error) {
     if (error.code === 'PGRST116') return null;
     throw error;
   }
-
   return data;
 };
 
